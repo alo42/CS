@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Laboratory Work No. 1 — The Caesar Cipher</title>
+<style>
+@page { size: A4; margin: 20mm 18mm 18mm 20mm; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body {
+  font-family: "Charter", "Georgia", "Times New Roman", serif;
+  font-size: 10.5pt; line-height: 1.52; color: #111; margin: 0;
+  hyphens: none;
+}
+p { margin: 0 0 8px 0; text-align: justify; }
+
+/* ---------- title page ---------- */
+.title-page { text-align: center; padding-top: 48mm; page-break-after: always; }
+.title-page .kicker { font-size: 11pt; letter-spacing: .14em; text-transform: uppercase; color: #555; }
+.title-page h1 { font-size: 23pt; line-height: 1.25; margin: 10mm 0 2mm; font-weight: 600; }
+.title-page .topic { font-size: 13pt; color: #333; font-style: italic; margin-bottom: 22mm; }
+.title-page .rule { width: 42mm; height: 2px; background: #222; margin: 0 auto 22mm; }
+.title-page .who { font-size: 12.5pt; line-height: 1.95; }
+.title-page .who b { font-weight: 600; }
+.title-page .foot { margin-top: 26mm; font-size: 10.5pt; color: #555; }
+
+/* ---------- headings ---------- */
+h2 {
+  font-size: 14pt; font-weight: 600; margin: 20px 0 9px;
+  padding-bottom: 3px; border-bottom: 1.2px solid #bbb;
+  page-break-after: avoid;
+}
+h3 {
+  font-size: 11.5pt; font-weight: 600; margin: 15px 0 6px; color: #1a1a1a;
+  page-break-after: avoid;
+}
+h2:first-of-type { margin-top: 0; }
+
+/* ---------- code ---------- */
+pre {
+  background: #f6f7f9; border: 1px solid #dde1e6; border-radius: 4px;
+  padding: 7px 9px; margin: 9px 0;
+  font-family: "Menlo", "SF Mono", "Consolas", monospace;
+  font-size: 8.1pt; line-height: 1.4;
+  white-space: pre-wrap; word-break: break-word;
+}
+pre.keep { page-break-inside: avoid; }
+code {
+  font-family: "Menlo", "SF Mono", "Consolas", monospace;
+  font-size: 8.9pt; background: #f1f3f5; padding: .5px 3px; border-radius: 3px;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- tables ---------- */
+table {
+  width: 100%; border-collapse: collapse; font-size: 9.3pt;
+  margin: 10px 0; page-break-inside: avoid;
+}
+th, td { border: 1px solid #c9ced4; padding: 4px 6px; vertical-align: top; text-align: left; }
+th { background: #eef1f4; font-weight: 600; }
+td code, th code { font-size: 8.4pt; }
+
+/* ---------- formulas ---------- */
+.formula {
+  text-align: center; margin: 11px 0; font-size: 12.5pt;
+  font-family: "Georgia", "Cambria Math", serif;
+}
+.formula i { font-style: italic; }
+.formula .op { font-style: normal; }
+
+ul { margin: 6px 0 9px 0; padding-left: 20px; }
+li { margin-bottom: 3px; }
+.caption { font-size: 9pt; color: #555; margin: -4px 0 10px; text-align: left; }
+</style>
+</head>
+<body>
+
+<div class="title-page">
+  <div class="kicker">Laboratory Work No.&nbsp;1</div>
+  <h1>The Caesar Cipher</h1>
+  <div class="topic">Implementation for the Romanian alphabet,<br>with a keyword-based permutation of the alphabet</div>
+  <div class="rule"></div>
+  <div class="who">
+    Discipline: <b>Cryptography</b><br>
+    Author: <b>Mutu Adrian</b><br>
+    Group: <b>FAF-242</b>
+  </div>
+  <div class="foot">9 October 2026</div>
+</div>
+
+<h2>1. Short theory</h2>
+
+<p>The Caesar cipher is a monoalphabetic substitution in which every letter of the plaintext is replaced by the letter found a fixed number of positions further along the alphabet. The secret key <code>k</code> is that shift, and the same key serves both directions:</p>
+
+<div class="formula"><i>c</i> = <i>e<sub>k</sub></i>(<i>x</i>) = (<i>x</i> + <i>k</i>) <span class="op">mod</span> <i>n</i></div>
+<div class="formula"><i>m</i> = <i>d<sub>k</sub></i>(<i>y</i>) = (<i>y</i> &minus; <i>k</i>) <span class="op">mod</span> <i>n</i></div>
+
+<p>Here <code>x</code> and <code>y</code> are the numeric codes of a letter — its position in the alphabet, counted from 0 — and <code>n</code> is the length of the alphabet. When <code>y - k</code> is negative the result is brought back into the range <code>0 … n-1</code> by adding <code>n</code>, because some languages return negative remainders.</p>
+
+<p>For the Romanian alphabet <code>n = 31</code>, so <code>k ∈ {1, 2, …, 30}</code>. The value <code>k = 0</code> is excluded because it would leave the text unchanged. A key space of 30 is the cipher's fatal weakness: an attacker decrypts the message with all 30 keys and reads the one candidate that makes sense in the language of the message.</p>
+
+<h3>Adding a permutation</h3>
+
+<p>To enlarge the key space, the alphabet itself is reordered using a second key — a keyword. The permuted alphabet is built by writing the letters of the keyword first, keeping only the first occurrence of a repeated letter, followed by the remaining letters of the alphabet in their natural order. The shift is then applied over this new order, so a letter's numeric code becomes its position in the <i>permuted</i> alphabet rather than in the natural one.</p>
+
+<p>The two keys <code>(k₁, k₂)</code> give a far larger key space:</p>
+
+<table>
+<tr><th>Version</th><th>Keys</th><th>Number of keys</th><th>Broken by</th></tr>
+<tr><td>Caesar</td><td><code>k</code></td><td>30</td><td>exhaustive search — 30 trial decryptions</td></tr>
+<tr><td>Caesar with a permutation</td><td><code>(k₁, k₂)</code></td><td>31! × 30 ≈ 2.47 × 10<sup>35</sup></td><td>frequency analysis</td></tr>
+</table>
+
+<p>Exhaustive search is now out of reach. The cipher is still broken easily, though, because it remains a monoalphabetic substitution: each plaintext letter is always replaced by the same ciphertext letter, so the letter frequencies of the language pass through into the ciphertext unchanged. Different key pairs can also produce the same substitution, so the number of distinct encryptions never exceeds 31!.</p>
+
+<h2>2. Implementation</h2>
+
+<p>The program is written in Python 3 and uses only the standard library. Both tasks share one implementation of the cipher, because they differ in nothing but the order of the alphabet the shift is applied to.</p>
+
+<table>
+<tr><th>File</th><th>Contents</th></tr>
+<tr><td><code>romanian_alphabet.py</code></td><td>the letter encoding of Table 2 and all input validation</td></tr>
+<tr><td><code>caesar.py</code></td><td>the permuted alphabet, encryption and decryption</td></tr>
+<tr><td><code>main.py</code></td><td>the interactive program for both tasks</td></tr>
+<tr><td><code>tests/test_ciphers.py</code></td><td>automated checks, including the examples worked out by hand in the assignment</td></tr>
+</table>
+
+<h3>The letter encoding</h3>
+
+<pre class="keep">ALPHABET = (
+    "A", "Ă", "Â", "B", "C", "D", "E", "F", "G", "H", "I", "Î", "J", "K", "L",
+    "M", "N", "O", "P", "Q", "R", "S", "Ș", "T", "Ț", "U", "V", "W", "X", "Y",
+    "Z",
+)
+
+N = len(ALPHABET)  # 31
+
+LETTER_TO_CODE = {letter: code for code, letter in enumerate(ALPHABET)}</pre>
+
+<p>The alphabet is an explicit tuple in the order of Table 2, so a letter's numeric code is simply its index in that tuple: <code>A = 0</code>, <code>Ă = 1</code>, …, <code>Z = 30</code>. This is what satisfies the requirement that built-in character encodings must not be used to compute the shift — no <code>ord()</code> or <code>chr()</code> appears anywhere in the ciphers.</p>
+
+<h3>Building the permuted alphabet</h3>
+
+<pre class="keep">def build_permuted_alphabet(keyword, alphabet=ALPHABET):
+    permuted = []
+    for letter in keyword:
+        if letter not in permuted:
+            permuted.append(letter)
+    for letter in alphabet:
+        if letter not in permuted:
+            permuted.append(letter)
+    return tuple(permuted)</pre>
+
+<p>The first loop writes the letters of the keyword, skipping any letter already present, so only the first occurrence of a repeated letter is kept. The second loop appends the letters not used by the keyword in their natural order. The result is always a permutation of all 31 letters.</p>
+
+<h3>Encryption and decryption</h3>
+
+<pre class="keep">def encrypt(text, key, alphabet=ALPHABET):
+    to_code = _codes(alphabet)
+    n = len(alphabet)
+    return "".join(alphabet[(to_code[letter] + key) % n] for letter in text)
+
+
+def decrypt(text, key, alphabet=ALPHABET):
+    to_code = _codes(alphabet)
+    n = len(alphabet)
+    return "".join(alphabet[(to_code[letter] - key + n) % n] for letter in text)</pre>
+
+<p>These are the two formulas applied letter by letter: each letter is turned into its code, shifted modulo <code>n</code>, and turned back into the letter standing at the new position. The ordered alphabet is a parameter, so task 1.1 calls these functions with <code>ALPHABET</code> and task 1.2 calls them with the permuted alphabet — one implementation for both tasks. In <code>decrypt</code>, <code>+ n</code> before the modulo keeps the result in <code>0 … n-1</code> even in a language whose remainder may come out negative.</p>
+
+<h3>Input validation</h3>
+
+<pre class="keep">def normalize_text(raw):
+    text = unicodedata.normalize("NFC", raw)
+
+    letters = []
+    for position, char in enumerate(text, start=1):
+        if char.isspace():          # spaces are allowed in the input...
+            continue                # ...and simply dropped
+        char = CEDILLA_VARIANTS.get(char, char)
+        char = LOWER_TO_UPPER.get(char, char)
+        if char not in LETTER_TO_CODE:
+            raise InvalidCharacterError(char, position)
+        letters.append(char)
+    return "".join(letters)</pre>
+
+<p>The text is converted to uppercase, spaces are removed, and the cedilla spellings <code>Ş</code>/<code>Ţ</code> are folded onto the comma-below letters <code>Ș</code>/<code>Ț</code> so that text typed on different keyboards is accepted. NFC normalization first recomposes letters that arrive as a base letter plus a combining comma. The first character that is not a Romanian letter raises an error carrying both the character and its position, which is what lets the program tell the user exactly what was rejected.</p>
+
+<pre class="keep">def parse_key(raw):
+    try:
+        key = int(raw.strip())
+    except ValueError:
+        raise InvalidKeyError("... must be a whole number between 1 and 30 ...")
+    if not MIN_KEY &lt;= key &lt;= MAX_KEY:
+        raise InvalidKeyError("the key %d is out of range; ..." % key)
+    return key</pre>
+
+<p>Key 1 is accepted only as an integer in <code>1 … 30</code>; key 2 is put through <code>normalize_text</code> and then checked to be at least 7 letters long. Every rejection is reported with the allowed values and the program asks for the value again:</p>
+
+<pre class="keep">def ask(prompt, parse):
+    """Ask for a value until `parse` accepts it, reporting every rejection."""
+    while True:
+        raw = input(prompt)
+        try:
+            return parse(raw)
+        except (InvalidKeyError, InvalidCharacterError, InvalidKeywordError) as error:
+            print("  [invalid input] %s\n" % error)</pre>
+
+<p>This single helper drives every prompt in the program, so no invalid value can reach the cipher and no invalid value ends the program.</p>
+
+<h2>3. Results</h2>
+
+<p>All runs below use the plaintext <code>cifrul cezar</code> and the numeric key <code>k = 3</code>, so the two tasks can be compared directly. The console output is reproduced as it appears on screen.</p>
+
+<h3>Task 1.1 — encryption</h3>
+
+<pre class="keep">========================================================================
+Task 1.1 - Caesar cipher (Romanian alphabet, n = 31)
+========================================================================
+Operation - 1 = encrypt, 2 = decrypt: 1
+Key 1 - numeric shift (1..30): 3
+
+  Alphabet in use (Table 2):
+    code    0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+    letter  A  Ă  Â  B  C  D  E  F  G  H  I  Î  J  K  L  M
+    code   16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
+    letter  N  O  P  Q  R  S  Ș  T  Ț  U  V  W  X  Y  Z
+
+Plaintext (spaces are allowed and removed): cifrul cezar
+
+  Plaintext  (uppercase, no spaces) : CIFRULCEZAR
+  Ciphertext                        : FKITXOFHÂBT</pre>
+
+<p>The result can be checked by hand: <code>C = 4</code> becomes <code>4 + 3 = 7 = F</code>, <code>I = 10</code> becomes <code>13 = K</code>, and <code>Z = 30</code> wraps around to <code>(30 + 3) mod 31 = 2 = Â</code>.</p>
+
+<h3>Task 1.1 — decryption</h3>
+
+<pre class="keep">Operation - 1 = encrypt, 2 = decrypt: 2
+Key 1 - numeric shift (1..30): 3
+
+Ciphertext (spaces are allowed and removed): FKITXOFHÂBT
+
+  Ciphertext (uppercase, no spaces) : FKITXOFHÂBT
+  Decrypted message                 : CIFRULCEZAR</pre>
+
+<h3>Task 1.2 — encryption with the keyword <code>criptografie</code></h3>
+
+<pre class="keep">========================================================================
+Task 1.2 - Caesar cipher with a keyword permutation (Romanian alphabet, n = 31)
+========================================================================
+Operation - 1 = encrypt, 2 = decrypt: 1
+Key 1 - numeric shift (1..30): 3
+Key 2 - keyword (at least 7 Romanian letters): criptografie
+
+  Keyword used: CRIPTOGRAFIE
+  Permuted alphabet (check it by hand against Table 3):
+    code    0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+    letter  C  R  I  P  T  O  G  A  F  E  Ă  Â  B  D  H  Î
+    code   16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
+    letter  J  K  L  M  N  Q  S  Ș  Ț  U  V  W  X  Y  Z
+
+Plaintext (spaces are allowed and removed): cifrul cezar
+
+  Plaintext  (uppercase, no spaces) : CIFRULCEZAR
+  Ciphertext                        : POÂTXQPBIĂT</pre>
+
+<p>The keyword <code>CRIPTOGRAFIE</code> contributes the 10 distinct letters C, R, I, P, T, O, G, A, F, E — the second R, I and the repeated letters are dropped — and the remaining 21 letters of the alphabet follow in their natural order. In this permuted alphabet <code>C</code> has position 0 and becomes the letter at position 3, which is <code>P</code>; <code>F</code> has position 8 and becomes <code>Â</code>.</p>
+
+<p>The same plaintext and the same numeric key now give a different ciphertext:</p>
+
+<table>
+<tr><th>Version</th><th>Ciphertext of <code>CIFRULCEZAR</code>, <code>k = 3</code></th></tr>
+<tr><td>Task 1.1 — plain Caesar</td><td><code>FKITXOFHÂBT</code></td></tr>
+<tr><td>Task 1.2 — with the keyword <code>CRIPTOGRAFIE</code></td><td><code>POÂTXQPBIĂT</code></td></tr>
+</table>
+
+<h3>Task 1.2 — decryption</h3>
+
+<pre class="keep">Operation - 1 = encrypt, 2 = decrypt: 2
+Key 1 - numeric shift (1..30): 3
+Key 2 - keyword (at least 7 Romanian letters): criptografie
+
+  Keyword used: CRIPTOGRAFIE
+  Permuted alphabet (check it by hand against Table 3):
+    code    0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+    letter  C  R  I  P  T  O  G  A  F  E  Ă  Â  B  D  H  Î
+    code   16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
+    letter  J  K  L  M  N  Q  S  Ș  Ț  U  V  W  X  Y  Z
+
+Ciphertext (spaces are allowed and removed): POÂTXQPBIĂT
+
+  Ciphertext (uppercase, no spaces) : POÂTXQPBIĂT
+  Decrypted message                 : CIFRULCEZAR</pre>
+
+<h3>Invalid input — the numeric key</h3>
+
+<p>A key of 0, a key above 30 and a key that is not a number are each rejected with the allowed range, and the program asks again:</p>
+
+<pre>Operation - 1 = encrypt, 2 = decrypt: 1
+Key 1 - numeric shift (1..30): 0
+  [invalid input] the key 0 is out of range; key 1 must be between 1 and 30 inclusive (the alphabet has 31 letters, and a shift of 0 would leave the text unchanged)
+
+Key 1 - numeric shift (1..30): 35
+  [invalid input] the key 35 is out of range; key 1 must be between 1 and 30 inclusive (the alphabet has 31 letters, and a shift of 0 would leave the text unchanged)
+
+Key 1 - numeric shift (1..30): trei
+  [invalid input] 'trei' is not an integer; key 1 must be a whole number between 1 and 30 inclusive
+
+Key 1 - numeric shift (1..30): 3</pre>
+
+<h3>Invalid input — a character outside the alphabet</h3>
+
+<p>The message names the rejected character and its position, then lists the letters that are allowed:</p>
+
+<pre>Plaintext (spaces are allowed and removed): salut, lume
+  [invalid input] the character ',' (position 6) is not a letter of the Romanian alphabet; allowed letters are A Ă Â B C D E F G H I Î J K L M N O P Q R S Ș T Ț U V W X Y Z (uppercase or lowercase) and spaces, which are removed
+
+Plaintext (spaces are allowed and removed): salut lume
+
+  Plaintext  (uppercase, no spaces) : SALUTLUME
+  Ciphertext                        : ȚBOXVOXPH</pre>
+
+<h3>Invalid input — the keyword</h3>
+
+<p>A keyword shorter than 7 letters and a keyword containing a character outside the alphabet are both rejected:</p>
+
+<pre>Key 2 - keyword (at least 7 Romanian letters): cripto
+  [invalid input] the keyword 'CRIPTO' has 6 letter(s); key 2 must have at least 7 letters
+
+Key 2 - keyword (at least 7 Romanian letters): cripto-grafie
+  [invalid input] key 2 may contain only letters of the Romanian alphabet: the character '-' (position 7) is not a letter of the Romanian alphabet; allowed letters are A Ă Â B C D E F G H I Î J K L M N O P Q R S Ș T Ț U V W X Y Z (uppercase or lowercase) and spaces, which are removed
+
+Key 2 - keyword (at least 7 Romanian letters): criptografie</pre>
+
+<h3>Automated checks</h3>
+
+<p>The repository also contains a test suite that pins the implementation to the examples worked out by hand in the assignment. Because <code>encrypt</code> and <code>decrypt</code> take the ordered alphabet as a parameter, the very same functions can be run over the 26-letter English alphabet and compared with the values printed in the laboratory work:</p>
+
+<table>
+<tr><th>Input</th><th>Keys</th><th>Expected</th><th>Alphabet</th></tr>
+<tr><td><code>BRUTEFORCEATTACK</code></td><td><code>k = 17</code></td><td><code>SILKVWFITVRKKRTB</code></td><td>English, n = 26</td></tr>
+<tr><td><code>CIFRULCEZAR</code></td><td><code>k = 3</code></td><td><code>FLIUXOFHCDU</code></td><td>English, n = 26</td></tr>
+<tr><td><code>CIFRULCEZAR</code></td><td><code>k = 3</code>, <code>k₂ = CRYPTOGRAPHY</code></td><td><code>PLKTXQPJYDT</code></td><td>English, permuted</td></tr>
+<tr><td><code>CIFRULCEZAR</code></td><td><code>k = 3</code></td><td><code>FKITXOFHÂBT</code></td><td>Romanian, n = 31</td></tr>
+</table>
+
+<p>All four match, and a round-trip test confirms that <code>decrypt(encrypt(m, k), k) = m</code> for every key from 1 to 30 in both tasks:</p>
+
+<pre class="keep">$ python3 -m unittest discover -s tests
+....................
+----------------------------------------------------------------------
+Ran 20 tests in 0.001s
+
+OK</pre>
+
+<h2>4. Conclusions</h2>
+
+<p>Neither cipher is usable for real protection, but they fail for different reasons, and that difference is the point of the laboratory work.</p>
+
+<p>The plain Caesar cipher is broken by its key space alone. With <code>n = 31</code> there are only 30 possible keys, so an attacker writes out all 30 decryptions and picks the readable one — a few seconds of work, and no knowledge of the plaintext is needed beyond knowing what language it is in. Secrecy of the method adds nothing, since the method is public.</p>
+
+<p>Adding the keyword permutation raises the number of keys to about <code>2.47 × 10³⁵</code>, which does put exhaustive search out of reach. It does not make the cipher strong, though, because the weakness simply moves: the cipher is still a monoalphabetic substitution, so each plaintext letter always maps to the same ciphertext letter and the letter frequencies of Romanian survive into the ciphertext. An attacker counts letters, matches the most frequent ones against the frequencies of the language, and recovers the substitution without ever searching the key space. A large key space is therefore a necessary condition for security, not a sufficient one — the structure the cipher leaves in the ciphertext matters more than the number of keys.</p>
+
+<p>The practical lesson from the implementation was that the alphabet must be treated as explicit data rather than as something the programming language already knows. Once the alphabet was a plain ordered list and a letter's code was its position in that list, the Romanian diacritics stopped being a special case: <code>Ă</code>, <code>Â</code>, <code>Î</code>, <code>Ș</code> and <code>Ț</code> are simply letters at positions 1, 2, 11, 22 and 24, and wrapping <code>Z</code> around to <code>Â</code> needs no extra handling. Making the ordered alphabet a parameter of the two cipher functions then collapsed both tasks into one implementation, which is also what made it possible to verify the code against the English examples printed in the assignment before trusting it on 31 letters. Most of the remaining work was input validation — in a program of this size, the checks on the key, the keyword and the text are longer than the cipher itself.</p>
+
+<h2>5. Source code</h2>
+
+<p>The full source code is in the repository <a href="https://github.com/alo42/CS">github.com/alo42/CS</a>.</p>
+
+<p>To run the program:</p>
+
+<pre class="keep">git clone git@github.com:alo42/CS.git
+cd CS
+python3 main.py</pre>
+
+<p>To run the automated checks:</p>
+
+<pre class="keep">python3 -m unittest discover -s tests</pre>
+
+<p>The program needs only Python 3 and the standard library.</p>
+
+</body>
+</html>
