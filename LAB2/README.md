@@ -1,6 +1,6 @@
 # Laboratory Work No. 2 — Cryptanalysis of a Monoalphabetic Cipher
 
-Breaking variant 15 by frequency analysis: an intercepted English message,
+Breaking variant 16 by frequency analysis: an intercepted English message,
 enciphered with a monoalphabetic substitution in which only the letters were
 replaced.
 
@@ -29,7 +29,7 @@ The other three commands need no word list.
 
 | File | Contents |
 | --- | --- |
-| `ciphertext.txt` | the intercepted cryptogram, variant 15 |
+| `ciphertext.txt` | the intercepted cryptogram, variant 16 |
 | `plaintext.txt` | the recovered message |
 | `english.py` | English letter frequencies (table 2.2) and the language model |
 | `frequency.py` | letter, bigram, trigram and word statistics |
@@ -48,8 +48,9 @@ ciphertext  a b c d e f g h i j k l m n o p q r s t u v w x y z
 plaintext   b q f u j y n c r g v k z o d s h w l a p e t i x m
 ```
 
-The message is a passage on the effect of the telegraph on nineteenth-century
-cryptography, opening *"THE TELEGRAPH made cryptography what it is today."*
+The message is a passage on how the telegraph reshaped nineteenth-century
+cryptology, opening *"The first one was waiting in the wings."* and ending on
+Thomas Jefferson's wheel cypher.
 
 The enciphering key is not random: it is the affine cipher
 
@@ -63,18 +64,20 @@ right, since a wrong key would show no such structure.
 
 ## How the attack goes
 
-1. **Count.** `V` is the most frequent letter at 13.84%, against 12.70% for
-   `E` in English; the first eight letters of the two frequency orders line up
-   almost exactly.
-2. **Find the giveaway word.** `WQV` occurs 35 times, far more than any other
-   word — `THE`.
-3. **Use the short words.** `NC` (19), `XG` (12) and `WN` (11) give `OF`, `IN`
-   and `TO`; `TGO` (16) gives `AND`.
-4. **Read what appears.** The title `WVSVJITUQ` becomes `TELEGRAPH`,
-   `HIFUWNJITUQF` becomes `CRYPTOGRAPHY`, `PTZDVS` becomes `SAMUEL`.
-5. **Mop up the rare letters.** Each of `J`, `K`, `Q`, `X` and `Z` is fixed by
-   a single word: `EDPW` = `JUST`, `LVFP` = `KEYS`, `VBDTS` = `EQUAL`,
-   `VYUVGPV` = `EXPENSE`, `MNGV` = `ZONE`.
+1. **Count.** `V` is the most frequent letter at 12.50%, against 12.70% for
+   `E` in English, and the profile follows English closely in shape.
+2. **Find the giveaway word.** `WQV` occurs 43 times as a word and 67 times as
+   a trigram — `THE`.
+3. **Use the short words.** `WN` (8) reads `T-` and can only be `TO`; `NC`
+   (28, the commonest two-letter word) is then `OF`. `T` alone 15 times plus
+   `TGO` (18) gives `AND`, and `XG` (13) gives `IN`, confirmed by `XW` (19)
+   reading `IT`.
+4. **Read what appears.** `WVSVJITUQ` becomes `TELEGRAPH`, `RTP` becomes
+   `WAS`, `HIFUWNJITUQF` becomes `CRYPTOGRAPHY`.
+5. **Mop up the rare letters.** Each of the last seven is fixed by one word:
+   `XZUNPPXAXSXWF` = `IMPOSSIBILITY`, `IVBDXIVZVGWP` = `REQUIREMENTS`,
+   `ZTENI` = `MAJOR`, `VTPXSFPNSKVO` = `EASILY SOLVED`, `LVFRNIO` = `KEYWORD`,
+   `PUVHXTSXMVO` = `SPECIALIZED`, `VYHVUW` = `EXCEPT`.
 
 `python3 main.py walkthrough` replays all eight steps, printing the message
 after each one with the letters recovered so far in lowercase.

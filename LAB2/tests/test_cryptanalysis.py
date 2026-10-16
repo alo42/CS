@@ -61,26 +61,31 @@ class TestFrequency(unittest.TestCase):
     def test_cipher_words_and_plain_words_share_a_pattern(self):
         # A substitution cannot change the shape of a word.
         self.assertEqual(frequency.pattern("wqv"), frequency.pattern("the"))
-        self.assertEqual(frequency.pattern("vyuvgpv"), frequency.pattern("expense"))
+        self.assertEqual(frequency.pattern("xzunppxaxsxwf"),
+                         frequency.pattern("impossibility"))
 
     def test_the_most_frequent_letter_is_v(self):
         self.assertEqual(frequency.by_frequency(CIPHERTEXT)[0], "v")
 
     def test_the_most_frequent_three_letter_word_is_wqv(self):
         self.assertEqual(frequency.word_counts(CIPHERTEXT, length=3, top=1),
-                         [("wqv", 35)])
+                         [("wqv", 43)])
 
 
 class TestWalkthrough(unittest.TestCase):
+    def test_each_stage_has_a_title_and_an_explanation(self):
+        for _, title, explanation, _ in walkthrough.replay():
+            self.assertTrue(title and explanation)
+
     def test_every_stage_only_adds_letters(self):
         previous = {}
-        for _, _, key in walkthrough.replay():
+        for _, _, _, key in walkthrough.replay():
             for letter, plain in previous.items():
                 self.assertEqual(key[letter], plain)
             previous = key
 
     def test_the_stages_end_at_the_recovered_key(self):
-        final = list(walkthrough.replay())[-1][2]
+        final = list(walkthrough.replay())[-1][3]
         self.assertEqual(substitution.key_to_string(final), RECOVERED_KEY)
 
 
@@ -111,8 +116,8 @@ class TestPlaintext(unittest.TestCase):
         plain = substitution.decrypt(
             CIPHERTEXT, substitution.key_from_string(RECOVERED_KEY)
         ).lower()
-        for phrase in ["the telegraph", "cryptography", "samuel", "secrecy",
-                       "what hath god", "civil war"]:
+        for phrase in ["the telegraph", "cryptography", "cryptanalysts",
+                       "vigenere", "thomas jefferson", "wheel cypher"]:
             self.assertIn(phrase, plain)
 
     def test_recovered_key_is_an_affine_cipher(self):

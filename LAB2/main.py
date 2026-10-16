@@ -80,8 +80,8 @@ def command_walkthrough(text):
     print("Breaking the cipher, one deduction at a time")
     print(RULE)
 
-    for number, explanation, key in walkthrough.replay():
-        print("\n--- Step %d " % number + "-" * 60)
+    for number, title, explanation, key in walkthrough.replay():
+        print("\n--- Step %d - %s " % (number, title) + "-" * 46)
         for line in textwrap.wrap(explanation, width=76):
             print(line)
         print("\n  substitutions so far: %s" % substitution.key_to_string(key))

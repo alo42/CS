@@ -1,43 +1,44 @@
-THE TELEGRAPH made cryptography what it is today. Samuel F. B. Morsesent "What hath God 
-wrought!" in 1844. The next year his lawyer andpromotional agent, Francis O. J. Smith, published 
-a commercial codeentitled The Secret Corresponding Vocabulary; Adapted for Use to 
-Morse'sElectro-Magnetic Telegraph, in whose preface he declared that "secrecy 
-incorrespondence, is far t he most important consideration." This wasprovided by a super -
-encipherment.As the most exciting invention of the first half of the century, 
-thetelegraph stirred as much interest in its day as Sputnik did in its. Thegreat and widely 
-felt need for secrecy aw akened the latent interest inciphers that so many people seem to 
-have, and kindled a new interest inmany others. Dozens of persons attempted to dream up their 
-ownunbreakable ciphers. Their contributions enriched it with dozens of newcipher 
-systems.As busin essmen and the public used the telegraph more and more,they found that 
-their fears about lack of privacy were exaggerated. Theclerks dealt impersonally with the 
-messages. The telegraph companiesrespected their confidentiality. And commercial codes like 
-Smith's, whichreplaced words and phrases by single codewords or code -numbers to cut telegraph 
-tolls, afforded sufficient security for mostbusiness transactions by simply precluding an 
-at-sight comprehension ofthe meaning. The brokers and traders soon realized  that the 
-mainadvantage of these codes was their economy.Government ministries used the telegraph, 
-too. At first they musthave encoded with their nomenclators. But although secrecy 
-wasparamount for them, they liked the telegraphic economy of a large code —especially as they 
-telegraphed more and more. So when the time arrivedto compile a new nomenclator, they abandoned 
-that form, copied thecommercial form, and produced a full -fledged code. The nomenclatorshad 
-had their 1,- or 2,000 code-numbers in mixed order , but the warand foreign ministries balked at 
-the expense of drawing up a 50,000 -entry code in two parts, and they had no professional 
-cryptanalysts towarn them of the danger of the one -part format. They relied for securityupon 
-small editions, big safes, e xtensive lexicon (large codes are harderto break than small ones, 
-other things being equal), andsuperencipherment, retaining codenumbers to facilitate this 
-instead ofswitching to codewords. This evolution was essentially complete by the1860s. 
-The large, one-part code had replaced the small, two -partnomenclator in high-level military and 
-diplomatic cryptography.Meanwhile, the telegraph, author of this development, was 
-creatingsomething new in war—signal communications, or voluminous commandand reconnaissance 
-messages. Of course such messages had existedbefore, with torches, pigeons, and couriers, but 
-in so rarefied a form thatthey were not even called "signal communications." The 
-telegraphenabled commanders, for the first time in history, to exert instantaneo usand 
-continuous control over great masses of men spread over largeareas.These tactical messages 
-required protection: telegraph wires could betapped. Neither the old nomenclator nor the 
-new code would do. Theywere too easy to capture in combat, too hard to  reissue quickly 
-andfrequently to the numerous and widespread telegraph posts. Signalofficers turned away from 
-them. They looked instead to that neglectedchild of cryptography, the cipher. Ciphers could 
-be printed cheaply on asingle sheet of paper and dist ributed with ease. Secrecy was based 
-uponvariable keys, so capture of the general system and even of one of thekeys would not 
-compromise all an army's secret messages. Solutionswould be prevented by rapid key changes. 
-Ciphers were ideal for battle -zone messages, and the first of the modern wars, the American 
-Civil War,used them for just that. Thus was born a new genre in cryptography: thefield cipher.
+The first one was waiting in the wings. This was poly -alphabeticsubstitution, in the form 
+of the straight-alphabet Vigenere with shortrepeating keyword. The old objections to its 
+use, which boiled down tothe impossibility of correcting a garbled dispatch quickly 
+enough,vanished with the telegraph. It fulfilled the requirements of noncom -promisability 
+of th e general system and of ease of key changes. Moreover,it had the reputation of being 
+unbreakable—which, if its cryptogramswere not divided into words, it largely was. The military 
+adopted it atonce.Then, in 1863, a retired Prussian infantry major discovere d thegeneral 
+solution for the periodic polyalpha -betic substitution. At onestroke he demolished the 
+only impregnable structure in cryptography.Signal officers, compelled to provide secure 
+communications, huntedfrantically for new field ciphers. They found many good ideas in 
+thewritings of the dilettante cryptographers who had proposed ciphers forthe protection 
+of private messages. Soon some of these systems wereserving in the various armies of Europe 
+and the Americas. More ideascame from army officers who had studied cryptography in the courses 
+insignal communication that the national military academies, such as St.Cyr, had added in the 
+mid-1800s. Inevitably, cryptanalysts—who wereeither amateurs or soldiers with a professional 
+interest, for fullprofessionals there were none—replied with new techniques for breakingthe 
+new ciphers. From the slow crawl of nomenclator days, when theintroduction of a special group 
+meaning Disregard the preceding groupwould constitute a remarkable technical advance, the race 
+betweenoffense and defense in cryptology acclerated to its modern pace.The history of 
+cryptology from the decade that saw both the death ofthe black chambers and the birth of the 
+telegraph to World War I is thusa story of internal development. Without Rossignol s or 
+Willeses, andwithout major wars or diplomatic struggles, cryptology could notinfluence world 
+events, and, except for one or two unusual cases, it didnot. The telegraph launched this 
+evolution of cryptology. It broke the monopoly of the nomenclator. Th enomenclator had 
+reigned for 450 years as a general, all-purpose system,but it could not meet the new requirements 
+either of high -leveldiplomatic or military communications or of low -level 
+signalcommunications, which the telegraph had engendered. Each call ed for itsown kind of 
+cryptosystem, a specialized one. Signal officers ranked thesesystems in a hierarchy, rising from 
+the simple and flexible and easilysolved to the extensive and hard to solve. The telegraph 
+thus stimulatedthe invention of many new ciphers and, by reaction, many new methodsof crypt-
+analysis, and compelled their arrangement in a scale ofcomplexity.Many of these ciphers and 
+techniques have become classic and are inuse today. Moreover, cryptography still functions 
+through a hierarchyand employs a multitude of special systems. The telegraph therebyfurnished 
+cryptography with the structure and the content that it stillhas. It made it what it is 
+today. All these things have antecedents, and just as the telegraph itself did,so were there 
+precursors of the cryptographic systems that itengendered.One cipher system invented 
+before the telegraph was so far ahead ofits time, and so much in the spirit of the later 
+inventions, that it deservesto be classed with them. Indeed, it deserves the front rank 
+among them,for this system was beyond doubt the most remarkable of all. So wellconceived was it 
+that today, more than a century and a half of rapidtechnological progress after its invention, 
+it remains in active use.But then it was invented by a remarkable m an, a well -known 
+writer,agriculturalist, bibliophile, architect, diplomat, gadgeteer, and statesmannamed 
+Thomas Jefferson. He called it his "wheel cypher," and it seemslikely that he invented it 
+either during 1790 to 1793 or during 1797 to1800.
