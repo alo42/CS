@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Laboratory Work No. 2 — Cryptanalysis of Monoalphabetic Ciphers</title>
+<style>
+@page { size: A4; margin: 20mm 18mm 18mm 20mm; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font-family: "Charter","Georgia","Times New Roman",serif; font-size: 10.5pt;
+       line-height: 1.5; color: #111; margin: 0; }
+p { margin: 0 0 8px 0; text-align: justify; }
+.title-page { text-align:center; padding-top:46mm; page-break-after:always; }
+.title-page .kicker { font-size:11pt; letter-spacing:.14em; text-transform:uppercase; color:#555; }
+.title-page h1 { font-size:23pt; line-height:1.25; margin:10mm 0 2mm; font-weight:600; }
+.title-page .topic { font-size:13pt; color:#333; font-style:italic; margin-bottom:20mm; }
+.title-page .rule { width:42mm; height:2px; background:#222; margin:0 auto 20mm; }
+.title-page .who { font-size:12.5pt; line-height:1.95; }
+.title-page .foot { margin-top:24mm; font-size:10.5pt; color:#555; }
+h2 { font-size:14pt; font-weight:600; margin:20px 0 9px; padding-bottom:3px;
+     border-bottom:1.2px solid #bbb; page-break-after:avoid; }
+h3 { font-size:11.5pt; font-weight:600; margin:14px 0 6px; page-break-after:avoid; }
+h2:first-of-type { margin-top:0; }
+pre { background:#f6f7f9; border:1px solid #dde1e6; border-radius:4px; padding:7px 9px;
+      margin:8px 0; font-family:"Menlo","SF Mono","Consolas",monospace;
+      font-size:7.6pt; line-height:1.4; white-space:pre-wrap; word-break:break-word; }
+pre.keep { page-break-inside:avoid; }
+pre.key { font-size:8.4pt; }
+code { font-family:"Menlo","SF Mono","Consolas",monospace; font-size:8.9pt;
+       background:#f1f3f5; padding:.5px 3px; border-radius:3px; }
+pre code { background:none; padding:0; font-size:inherit; }
+table { width:100%; border-collapse:collapse; font-size:9.3pt; margin:9px 0;
+        page-break-inside:avoid; }
+th,td { border:1px solid #c9ced4; padding:4px 6px; vertical-align:top; text-align:left; }
+th { background:#eef1f4; font-weight:600; }
+td code, th code { font-size:8.4pt; }
+.formula { text-align:center; margin:11px 0; font-size:12.5pt; font-family:"Georgia",serif; }
+ul { margin:6px 0 9px 0; padding-left:20px; }
+li { margin-bottom:3px; }
+.step { page-break-inside:avoid; }
+figure { margin:10px 0; page-break-inside:avoid; }
+figcaption { font-size:8.6pt; color:#555; margin-top:4px; }
+</style></head><body>
+
+<div class="title-page">
+  <div class="kicker">Laboratory Work No.&nbsp;2</div>
+  <h1>Cryptanalysis of<br>Monoalphabetic Ciphers</h1>
+  <div class="topic">Breaking an intercepted cryptogram by frequency analysis</div>
+  <div class="rule"></div>
+  <div class="who">
+    Discipline: <b>Cryptography</b><br>
+    Author: <b>Mutu Adrian</b><br>
+    Group: <b>FAF-242</b><br>
+    Variant: <b>15</b>
+  </div>
+  <div class="foot">16 October 2026</div>
+</div>
+
+<h2>1. Short theory</h2>
+<p>A monoalphabetic cipher replaces every occurrence of a letter with the same substitute
+throughout the message. Its key is an arbitrary permutation of the alphabet, so the key space is
+26! &asymp; 4.03 &times; 10<sup>26</sup> — far too large to search. The cipher is nevertheless broken
+routinely, because the key space is not where its weakness lies.</p>
+<p>The weakness is that the substitution leaves the <i>structure</i> of the language untouched.
+Each plaintext letter maps to one ciphertext letter and always the same one, so everything that
+makes a letter recognisable survives into the ciphertext: how often it occurs, which letters it
+sits next to, which short words it forms, whether it doubles. The attacker does not need the
+key — the text carries enough of the language to give the key away.</p>
+<table>
+<tr><th>Signal</th><th>What it gives away</th></tr>
+<tr><td>Letter frequencies</td><td><code>E</code> is the most common letter of English at 12.70%, then <code>T</code>, <code>A</code>, <code>O</code>, <code>I</code>, <code>N</code></td></tr>
+<tr><td>Short words</td><td>The commonest three-letter word is <code>THE</code>; two-letter words are mostly <code>OF</code>, <code>TO</code>, <code>IN</code>, <code>IS</code>, <code>AS</code></td></tr>
+<tr><td>Bigrams</td><td><code>TH</code>, <code>HE</code>, <code>AN</code>, <code>IN</code>, <code>ER</code>, <code>ON</code>, <code>RE</code>, <code>ED</code>, <code>ND</code>, <code>HA</code>, <code>AT</code>, <code>EN</code></td></tr>
+<tr><td>Trigrams</td><td><code>THE</code>, <code>AND</code>, <code>THA</code>, <code>ENT</code>, <code>ION</code>, <code>TIO</code>, <code>FOR</code>, <code>NDE</code></td></tr>
+<tr><td>Doubled letters</td><td><code>SS</code>, <code>EE</code>, <code>TT</code>, <code>OO</code> and <code>FF</code> are the frequent ones</td></tr>
+</table>
+<p>The attack works by hypothesis and confirmation rather than by calculation. The frequency order
+of the cryptogram is lined up against that of the language, which suggests a few substitutions;
+those are made, and the partly decrypted text is read to see which words are beginning to appear.
+A word that becomes readable fixes several more letters at once, and each new letter makes more
+words readable. The process converges quickly and is self-checking — a wrong guess produces
+unpronounceable text and is abandoned.</p>
+<p>Two conditions have to hold: the message must be long enough for its letter frequencies to
+resemble those of the language, and the language of the plaintext must be known. Both are
+satisfied here.</p>
+
+<h2>2. The intercepted cryptogram</h2>
+<p>Variant 15. The message is 3906 characters long, of which 3165 are letters. Two things
+are known about it: it was enciphered with a monoalphabetic cipher, and the plaintext is English.
+Only the letters were enciphered — digits, punctuation, spaces and the capitalisation are exactly
+as they were in the original, which is a considerable help, because the word boundaries are
+visible.</p>
+<pre>WQV WVSVJITUQ ztov hifuwnjituqf rqtw xw xp wnotf. Ptzdvs C. A. Znipvpvgw &quot;Rqtw qtwq Jno rindjqw!&quot; xg
+1844. Wqv gvyw fvti qxp strfvi tgouinznwxngts tjvgw, Citghxp N. E. Pzxwq, udasxpqvo t hnzzvihxts
+hnovvgwxwsvo Wqv Pvhivw Hniivpungoxgj Knhtadstif; Totuwvo cni Dpv wn Znipv&#x27;pVsvhwin-Ztjgvwxh Wvsvjituq,
+xg rqnpv uivcthv qv ovhstivo wqtw &quot;pvhivhf xghniivpungovghv, xp cti w qv znpw xzuniwtgw hngpxovitwxng.&quot;
+Wqxp rtpuinkxovo af t pduvi - vghxuqvizvgw.Tp wqv znpw vyhxwxgj xgkvgwxng nc wqv cxipw qtsc nc wqv
+hvgwdif, wqvwvsvjituq pwxiivo tp zdhq xgwvivpw xg xwp otf tp Pudwgxl oxo xg xwp. Wqvjivtw tgo rxovsf
+cvsw gvvo cni pvhivhf tr tlvgvo wqv stwvgw xgwvivpw xghxuqvip wqtw pn ztgf uvnusv pvvz wn qtkv, tgo
+lxgosvo t gvr xgwvivpw xgztgf nwqvip. Onmvgp nc uvipngp twwvzuwvo wn oivtz du wqvxi nrgdgaivtltasv
+hxuqvip. Wqvxi hngwixadwxngp vgixhqvo xw rxwq onmvgp nc gvrhxuqvi pfpwvzp.Tp adpxg vppzvg tgo wqv udasxh
+dpvo wqv wvsvjituq zniv tgo zniv,wqvf cndgo wqtw wqvxi cvtip tandw sthl nc uixkthf rviv vytjjvitwvo.
+Wqvhsvilp ovtsw xzuvipngtssf rxwq wqv zvpptjvp. Wqv wvsvjituq hnzutgxvpivpuvhwvo wqvxi hngcxovgwxtsxwf.
+Tgo hnzzvihxts hnovp sxlv Pzxwq&#x27;p, rqxhqivusthvo rniop tgo uqitpvp af pxgjsv hnovrniop ni hnov -gdzavip
+wn hdw wvsvjituq wnssp, tccniovo pdccxhxvgw pvhdixwf cni znpwadpxgvpp witgpthwxngp af pxzusf uivhsdoxgj
+tg tw-pxjqw hnzuivqvgpxng ncwqv zvtgxgj. Wqv ainlvip tgo witovip pnng ivtsxmvo wqtw wqv ztxgtoktgwtjv nc
+wqvpv hnovp rtp wqvxi vhngnzf.Jnkvigzvgw zxgxpwixvp dpvo wqv wvsvjituq, wnn. Tw cxipw wqvf zdpwqtkv
+vghnovo rxwq wqvxi gnzvghstwnip. Adw tswqndjq pvhivhf rtputitzndgw cni wqvz, wqvf sxlvo wqv wvsvjituqxh
+vhngnzf nc t stijv hnov —vpuvhxtssf tp wqvf wvsvjituqvo zniv tgo zniv. Pn rqvg wqv wxzv tiixkvown
+hnzuxsv t gvr gnzvghstwni, wqvf tatgongvo wqtw cniz, hnuxvo wqvhnzzvihxts cniz, tgo uinodhvo t cdss
+-csvojvo hnov. Wqv gnzvghstwnipqto qto wqvxi 1,- ni 2,000 hnov-gdzavip xg zxyvo niovi , adw wqv rtitgo
+cnivxjg zxgxpwixvp atslvo tw wqv vyuvgpv nc oitrxgj du t 50,000 -vgwif hnov xg wrn utiwp, tgo wqvf qto
+gn uincvppxngts hifuwtgtsfpwp wnrtig wqvz nc wqv otgjvi nc wqv ngv -utiw cniztw. Wqvf ivsxvo cni
+pvhdixwfdung pztss voxwxngp, axj ptcvp, v ywvgpxkv svyxhng (stijv hnovp tiv qtioviwn aivtl wqtg pztss
+ngvp, nwqvi wqxgjp avxgj vbdts), tgopduvivghxuqvizvgw, ivwtxgxgj hnovgdzavip wn cthxsxwtwv wqxp xgpwvto
+ncprxwhqxgj wn hnovrniop. Wqxp vknsdwxng rtp vppvgwxtssf hnzusvwv af wqv1860p. Wqv stijv, ngv-utiw hnov
+qto ivusthvo wqv pztss, wrn -utiwgnzvghstwni xg qxjq-svkvs zxsxwtif tgo oxusnztwxh
+hifuwnjituqf.Zvtgrqxsv, wqv wvsvjituq, tdwqni nc wqxp ovkvsnuzvgw, rtp hivtwxgjpnzvwqxgj gvr xg
+rti—pxjgts hnzzdgxhtwxngp, ni knsdzxgndp hnzztgotgo ivhnggtxpptghv zvpptjvp. Nc hndipv pdhq zvpptjvp qto
+vyxpwvoavcniv, rxwq wnihqvp, uxjvngp, tgo hndixvip, adw xg pn itivcxvo t cniz wqtwwqvf rviv gnw vkvg
+htssvo &quot;pxjgts hnzzdgxhtwxngp.&quot; Wqv wvsvjituqvgtasvo hnzztgovip, cni wqv cxipw wxzv xg qxpwnif, wn vyviw
+xgpwtgwtgvn dptgo hngwxgdndp hngwins nkvi jivtw ztppvp nc zvg puivto nkvi stijvtivtp.Wqvpv wthwxhts
+zvpptjvp ivbdxivo uinwvhwxng: wvsvjituq rxivp hndso avwtuuvo. Gvxwqvi wqv nso gnzvghstwni gni wqv gvr
+hnov rndso on. Wqvfrviv wnn vtpf wn htuwdiv xg hnzatw, wnn qtio wn ivxppdv bdxhlsf tgocivbdvgwsf wn wqv
+gdzvindp tgo rxovpuivto wvsvjituq unpwp. Pxjgtsnccxhvip wdigvo trtf cinz wqvz. Wqvf snnlvo xgpwvto wn
+wqtw gvjsvhwvohqxso nc hifuwnjituqf, wqv hxuqvi. Hxuqvip hndso av uixgwvo hqvtusf ng tpxgjsv pqvvw nc
+utuvi tgo oxpw ixadwvo rxwq vtpv. Pvhivhf rtp atpvo dungktixtasv lvfp, pn htuwdiv nc wqv jvgvits pfpwvz
+tgo vkvg nc ngv nc wqvlvfp rndso gnw hnzuinzxpv tss tg tizf&#x27;p pvhivw zvpptjvp. Pnsdwxngprndso av
+uivkvgwvo af ituxo lvf hqtgjvp. Hxuqvip rviv xovts cni atwwsv -mngv zvpptjvp, tgo wqv cxipw nc wqv
+znovig rtip, wqv Tzvixhtg Hxkxs Rti,dpvo wqvz cni edpw wqtw. Wqdp rtp anig t gvr jvgiv xg hifuwnjituqf:
+wqvcxvso hxuqvi.</pre>
+<p>A few words are run together (<code>Znipvpvgw</code>, <code>wqvwvsvjituq</code>) and a few have a
+stray space inside them (<code>v ywvgpxkv</code>). These come from the way the text was laid out in
+the assignment, not from the cipher, and they do not interfere with the attack.</p>
+
+<h2>3. Frequency analysis</h2>
+<p>Counting the letters of the cryptogram and placing them in decreasing order gives a profile that
+follows English very closely in shape. <code>V</code> leads at 13.84% against 12.70% for
+<code>E</code>, and the curve falls away at the same rate.</p>
+<table><tr><th>Rank</th><th>Cipher</th><th>%</th><th>English</th><th>%</th><th>Rank</th><th>Cipher</th><th>%</th><th>English</th><th>%</th></tr><tr><td>1</td><td><code>V</code></td><td>13.84</td><td><code>E</code></td><td>12.70</td><td>14</td><td><code>U</code></td><td>2.88</td><td><code>M</code></td><td>2.41</td></tr><tr><td>2</td><td><code>W</code></td><td>8.94</td><td><code>T</code></td><td>9.06</td><td>15</td><td><code>D</code></td><td>2.24</td><td><code>W</code></td><td>2.36</td></tr><tr><td>3</td><td><code>T</code></td><td>7.68</td><td><code>A</code></td><td>8.17</td><td>16</td><td><code>J</code></td><td>2.05</td><td><code>F</code></td><td>2.23</td></tr><tr><td>4</td><td><code>N</code></td><td>7.17</td><td><code>O</code></td><td>7.51</td><td>17</td><td><code>C</code></td><td>1.99</td><td><code>G</code></td><td>2.01</td></tr><tr><td>5</td><td><code>I</code></td><td>7.01</td><td><code>I</code></td><td>6.97</td><td>18</td><td><code>F</code></td><td>1.96</td><td><code>Y</code></td><td>1.97</td></tr><tr><td>6</td><td><code>P</code></td><td>6.70</td><td><code>N</code></td><td>6.75</td><td>19</td><td><code>R</code></td><td>1.61</td><td><code>P</code></td><td>1.93</td></tr><tr><td>7</td><td><code>G</code></td><td>6.54</td><td><code>S</code></td><td>6.33</td><td>20</td><td><code>A</code></td><td>1.20</td><td><code>B</code></td><td>1.49</td></tr><tr><td>8</td><td><code>X</code></td><td>5.94</td><td><code>H</code></td><td>6.09</td><td>21</td><td><code>K</code></td><td>0.66</td><td><code>V</code></td><td>0.98</td></tr><tr><td>9</td><td><code>Q</code></td><td>5.02</td><td><code>R</code></td><td>5.99</td><td>22</td><td><code>L</code></td><td>0.51</td><td><code>K</code></td><td>0.77</td></tr><tr><td>10</td><td><code>O</code></td><td>4.55</td><td><code>D</code></td><td>4.25</td><td>23</td><td><code>Y</code></td><td>0.28</td><td><code>J</code></td><td>0.15</td></tr><tr><td>11</td><td><code>H</code></td><td>4.01</td><td><code>L</code></td><td>4.03</td><td>24</td><td><code>B</code></td><td>0.13</td><td><code>X</code></td><td>0.15</td></tr><tr><td>12</td><td><code>S</code></td><td>3.73</td><td><code>C</code></td><td>2.78</td><td>25</td><td><code>M</code></td><td>0.13</td><td><code>Q</code></td><td>0.09</td></tr><tr><td>13</td><td><code>Z</code></td><td>3.16</td><td><code>U</code></td><td>2.76</td><td>26</td><td><code>E</code></td><td>0.06</td><td><code>Z</code></td><td>0.07</td></tr></table>
+<figure><svg viewBox="0 0 760 264" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica,Arial,sans-serif"><line x1="44" x2="746" y1="206" y2="206" stroke="#dcdfe3"/><text x="38" y="209" text-anchor="end" fill="#666" font-size="9">0</text><line x1="44" x2="746" y1="152.429" y2="152.429" stroke="#dcdfe3"/><text x="38" y="155.429" text-anchor="end" fill="#666" font-size="9">5</text><line x1="44" x2="746" y1="98.8571" y2="98.8571" stroke="#dcdfe3"/><text x="38" y="101.857" text-anchor="end" fill="#666" font-size="9">10</text><text x="38" y="50" text-anchor="end" fill="#666" font-size="9">%</text><rect x="49.94" y="69.9286" width="15.12" height="136.071" fill="#c9cdd2"/><circle cx="57.5" cy="57.7265" r="3" fill="#1668d9"/><text x="57.5" y="219" text-anchor="middle" font-size="9" fill="#1668d9">V</text><text x="57.5" y="231" text-anchor="middle" font-size="8" fill="#666">e</text><rect x="76.94" y="108.929" width="15.12" height="97.0714" fill="#c9cdd2"/><circle cx="84.5" cy="110.198" r="3" fill="#1668d9"/><text x="84.5" y="219" text-anchor="middle" font-size="9" fill="#1668d9">W</text><text x="84.5" y="231" text-anchor="middle" font-size="8" fill="#666">t</text><rect x="103.94" y="118.464" width="15.12" height="87.5357" fill="#c9cdd2"/><circle cx="111.5" cy="123.739" r="3" fill="#1668d9"/><text x="111.5" y="219" text-anchor="middle" font-size="9" fill="#1668d9">T</text><text x="111.5" y="231" text-anchor="middle" font-size="8" fill="#666">a</text><rect x="130.94" y="125.536" width="15.12" height="80.4643" fill="#c9cdd2"/><circle cx="138.5" cy="129.155" r="3" fill="#1668d9"/><text x="138.5" y="219" text-anchor="middle" font-size="9" fill="#1668d9">N</text><text x="138.5" y="231" text-anchor="middle" font-size="8" fill="#666">o</text><rect x="157.94" y="131.321" width="15.12" height="74.6786" fill="#c9cdd2"/><circle cx="165.5" cy="130.848" r="3" fill="#8a9098"/><text x="165.5" y="219" text-anchor="middle" font-size="9" fill="#111">I</text><text x="165.5" y="231" text-anchor="middle" font-size="8" fill="#666">i</text><rect x="184.94" y="133.679" width="15.12" height="72.3214" fill="#c9cdd2"/><circle cx="192.5" cy="134.233" r="3" fill="#8a9098"/><text x="192.5" y="219" text-anchor="middle" font-size="9" fill="#111">P</text><text x="192.5" y="231" text-anchor="middle" font-size="8" fill="#666">n</text><rect x="211.94" y="138.179" width="15.12" height="67.8214" fill="#c9cdd2"/><circle cx="219.5" cy="135.926" r="3" fill="#8a9098"/><text x="219.5" y="219" text-anchor="middle" font-size="9" fill="#111">G</text><text x="219.5" y="231" text-anchor="middle" font-size="8" fill="#666">s</text><rect x="238.94" y="140.75" width="15.12" height="65.25" fill="#c9cdd2"/><circle cx="246.5" cy="142.357" r="3" fill="#8a9098"/><text x="246.5" y="219" text-anchor="middle" font-size="9" fill="#111">X</text><text x="246.5" y="231" text-anchor="middle" font-size="8" fill="#666">h</text><rect x="265.94" y="141.821" width="15.12" height="64.1786" fill="#c9cdd2"/><circle cx="273.5" cy="152.175" r="3" fill="#8a9098"/><text x="273.5" y="219" text-anchor="middle" font-size="9" fill="#111">Q</text><text x="273.5" y="231" text-anchor="middle" font-size="8" fill="#666">r</text><rect x="292.94" y="160.464" width="15.12" height="45.5357" fill="#c9cdd2"/><circle cx="300.5" cy="157.253" r="3" fill="#1668d9"/><text x="300.5" y="219" text-anchor="middle" font-size="9" fill="#1668d9">O</text><text x="300.5" y="231" text-anchor="middle" font-size="8" fill="#666">d</text><rect x="319.94" y="162.821" width="15.12" height="43.1786" fill="#c9cdd2"/><circle cx="327.5" cy="163.007" r="3" fill="#8a9098"/><text x="327.5" y="219" text-anchor="middle" font-size="9" fill="#111">H</text><text x="327.5" y="231" text-anchor="middle" font-size="8" fill="#666">l</text><rect x="346.94" y="176.214" width="15.12" height="29.7857" fill="#c9cdd2"/><circle cx="354.5" cy="166.054" r="3" fill="#8a9098"/><text x="354.5" y="219" text-anchor="middle" font-size="9" fill="#111">S</text><text x="354.5" y="231" text-anchor="middle" font-size="8" fill="#666">c</text><rect x="373.94" y="176.429" width="15.12" height="29.5714" fill="#c9cdd2"/><circle cx="381.5" cy="172.148" r="3" fill="#8a9098"/><text x="381.5" y="219" text-anchor="middle" font-size="9" fill="#111">Z</text><text x="381.5" y="231" text-anchor="middle" font-size="8" fill="#666">u</text><rect x="400.94" y="180.179" width="15.12" height="25.8214" fill="#c9cdd2"/><circle cx="408.5" cy="175.194" r="3" fill="#8a9098"/><text x="408.5" y="219" text-anchor="middle" font-size="9" fill="#111">U</text><text x="408.5" y="231" text-anchor="middle" font-size="8" fill="#666">m</text><rect x="427.94" y="180.714" width="15.12" height="25.2857" fill="#c9cdd2"/><circle cx="435.5" cy="181.965" r="3" fill="#8a9098"/><text x="435.5" y="219" text-anchor="middle" font-size="9" fill="#111">D</text><text x="435.5" y="231" text-anchor="middle" font-size="8" fill="#666">w</text><rect x="454.94" y="182.107" width="15.12" height="23.8929" fill="#c9cdd2"/><circle cx="462.5" cy="183.996" r="3" fill="#8a9098"/><text x="462.5" y="219" text-anchor="middle" font-size="9" fill="#111">J</text><text x="462.5" y="231" text-anchor="middle" font-size="8" fill="#666">f</text><rect x="481.94" y="184.464" width="15.12" height="21.5357" fill="#c9cdd2"/><circle cx="489.5" cy="184.673" r="3" fill="#8a9098"/><text x="489.5" y="219" text-anchor="middle" font-size="9" fill="#111">C</text><text x="489.5" y="231" text-anchor="middle" font-size="8" fill="#666">g</text><rect x="508.94" y="184.893" width="15.12" height="21.1071" fill="#c9cdd2"/><circle cx="516.5" cy="185.012" r="3" fill="#1668d9"/><text x="516.5" y="219" text-anchor="middle" font-size="9" fill="#1668d9">F</text><text x="516.5" y="231" text-anchor="middle" font-size="8" fill="#666">y</text><rect x="535.94" y="185.321" width="15.12" height="20.6786" fill="#c9cdd2"/><circle cx="543.5" cy="188.735" r="3" fill="#8a9098"/><text x="543.5" y="219" text-anchor="middle" font-size="9" fill="#111">R</text><text x="543.5" y="231" text-anchor="middle" font-size="8" fill="#666">p</text><rect x="562.94" y="190.036" width="15.12" height="15.9643" fill="#c9cdd2"/><circle cx="570.5" cy="193.136" r="3" fill="#1668d9"/><text x="570.5" y="219" text-anchor="middle" font-size="9" fill="#1668d9">A</text><text x="570.5" y="231" text-anchor="middle" font-size="8" fill="#666">b</text><rect x="589.94" y="195.5" width="15.12" height="10.5" fill="#c9cdd2"/><circle cx="597.5" cy="198.891" r="3" fill="#1668d9"/><text x="597.5" y="219" text-anchor="middle" font-size="9" fill="#1668d9">K</text><text x="597.5" y="231" text-anchor="middle" font-size="8" fill="#666">v</text><rect x="616.94" y="197.75" width="15.12" height="8.25" fill="#c9cdd2"/><circle cx="624.5" cy="200.584" r="3" fill="#1668d9"/><text x="624.5" y="219" text-anchor="middle" font-size="9" fill="#1668d9">L</text><text x="624.5" y="231" text-anchor="middle" font-size="8" fill="#666">k</text><rect x="643.94" y="204.393" width="15.12" height="1.60714" fill="#c9cdd2"/><circle cx="651.5" cy="202.953" r="3" fill="#8a9098"/><text x="651.5" y="219" text-anchor="middle" font-size="9" fill="#111">Y</text><text x="651.5" y="231" text-anchor="middle" font-size="8" fill="#666">j</text><rect x="670.94" y="204.393" width="15.12" height="1.60714" fill="#c9cdd2"/><circle cx="678.5" cy="204.646" r="3" fill="#8a9098"/><text x="678.5" y="219" text-anchor="middle" font-size="9" fill="#111">B</text><text x="678.5" y="231" text-anchor="middle" font-size="8" fill="#666">x</text><rect x="697.94" y="205.036" width="15.12" height="0.964286" fill="#c9cdd2"/><circle cx="705.5" cy="204.646" r="3" fill="#8a9098"/><text x="705.5" y="219" text-anchor="middle" font-size="9" fill="#111">M</text><text x="705.5" y="231" text-anchor="middle" font-size="8" fill="#666">q</text><rect x="724.94" y="205.25" width="15.12" height="0.75" fill="#c9cdd2"/><circle cx="732.5" cy="205.323" r="3" fill="#8a9098"/><text x="732.5" y="219" text-anchor="middle" font-size="9" fill="#111">E</text><text x="732.5" y="231" text-anchor="middle" font-size="8" fill="#666">z</text><rect x="44" y="245" width="16" height="8" fill="#c9cdd2"/><text x="66" y="252" font-size="9" fill="#555">English (table 2.2)</text><circle cx="206" cy="249" r="3" fill="#8a9098"/><text x="215" y="252" font-size="9" fill="#555">cryptogram</text><circle cx="302" cy="249" r="3" fill="#1668d9"/><text x="311" y="252" font-size="9" fill="#555">cryptogram, where the rank match is in fact correct</text></svg>
+<figcaption>Letter frequencies of the cryptogram against English, by rank. Bars: English
+(table 2.2). Dots: the cryptogram. Blue marks the ranks at which matching the two orders happens
+to give the correct letter — 9 of 26.</figcaption></figure>
+<p>The chart shows why counting alone does not finish the job. Lining the two orders up rank for
+rank is correct for only 9 of the 26 letters — but it is correct for the first four, and
+those four are the ones worth having. <code>E</code>, <code>T</code>, <code>A</code> and
+<code>O</code> account for roughly 38% of English text, so fixing them makes a large part of the
+message readable, and the rest of the attack is driven by the words that then appear rather than by
+further counting.</p>
+<h3>The other signals</h3>
+<p>Word boundaries survived the encipherment, so short words and repeated groups are visible too:</p>
+<table>
+<tr><th>Signal</th><th>Most frequent in the cryptogram</th></tr>
+<tr><td>Three-letter words</td><td><code>WQV</code> (35), <code>TGO</code> (16), <code>CNI</code> (8), <code>GVR</code> (5), <code>RTP</code> (5), <code>QTO</code> (4)</td></tr>
+<tr><td>Two-letter words</td><td><code>NC</code> (19), <code>XG</code> (12), <code>WN</code> (11), <code>AF</code> (5), <code>TP</code> (5), <code>PN</code> (4)</td></tr>
+<tr><td>One-letter words</td><td><code>T</code> (9), <code>P</code> (3)</td></tr>
+<tr><td>Trigrams</td><td><code>WQV</code> (68), <code>TGO</code> (25), <code>ITU</code> (18), <code>JIT</code> (17), <code>TUQ</code> (17), <code>VGW</code> (16)</td></tr>
+<tr><td>Doubled letters</td><td><code>PP</code> (13), <code>SS</code> (10), <code>ZZ</code> (7), <code>NN</code> (5), <code>VV</code> (4), <code>II</code> (4)</td></tr>
+</table>
+<p>Two entries stand out before any substitution is made. <code>WQV</code> occurs 35 times as a word
+and 68 times as a trigram — no English word other than <code>THE</code> behaves like that. And
+<code>T</code> standing alone 9 times can only be <code>A</code> or <code>I</code>, since those are
+the only one-letter words in English.</p>
+
+<h2>4. Breaking the cipher</h2>
+<p>The attack proceeds exactly as in section 2.3 of the assignment. After every deduction the
+substitutions found so far are applied and the result is read back. Letters already recovered appear
+in <b>lowercase</b>; letters still unknown stay as the <b>UPPERCASE</b> ciphertext letter, so a
+half-broken word such as <code>tIe</code> shows at a glance what is missing.</p>
+<p>The running key is written as 26 characters — the plaintext letter that each ciphertext letter
+<code>a</code> to <code>z</code> stands for, with a dot where nothing has been decided yet. Only the
+opening of the message is reproduced at each step; <code>python3 main.py walkthrough</code> prints
+all eight stages in full.</p>
+<div class="step"><h3>Step 1 — the giveaway word</h3><p>The three-letter group WQV occurs 35 times - far more than any other word. The commonest three-letter word in English is THE, and V is also the most frequent letter of the cryptogram (13.84%, against 12.70% for E in English).</p><pre class="keep">key: ................h....et...
+
+the teSeJITUh ZTOe HIFUtNJITUhF RhTt Xt XP tNOTF. PTZDeS C. A. ZNIPePeGt &quot;RhTt hTth JNO RINDJht!&quot; XG
+1844. the GeYt FeTI hXP STRFeI TGOUINZNtXNGTS TJeGt, CITGHXP N. E. PZXth, UDASXPheO T HNZZeIHXTS
+HNOeeGtXtSeO the PeHIet HNIIePUNGOXGJ KNHTADSTIF; TOTUteO CNI DPe tN ZNIPe&#x27;PeSeHtIN-ZTJGetXH teSeJITUh,
+XG RhNPe UIeCTHe he OeHSTIeO thTt &quot;PeHIeHF XGHNIIePUNGOeGHe, XP CTI t he ZNPt XZUNItTGt HNGPXOeITtXNG.&quot;</pre></div><div class="step"><h3>Step 2 — the two-letter words</h3><p>Among two-letter words, NC appears 19 times, XG 12 and WN 11. With W already standing for T, WN must be TO. The other two are then OF and IN, which also agrees with N being the fourth most frequent letter and matching O.</p><pre class="keep">key: ..f...n......o..h....eti..
+
+the teSeJITUh ZTOe HIFUtoJITUhF RhTt it iP toOTF. PTZDeS f. A. ZoIPePent &quot;RhTt hTth JoO RIoDJht!&quot; in
+1844. the neYt FeTI hiP STRFeI TnOUIoZotionTS TJent, fITnHiP o. E. PZith, UDASiPheO T HoZZeIHiTS
+HoOeentitSeO the PeHIet HoIIePUonOinJ KoHTADSTIF; TOTUteO foI DPe to ZoIPe&#x27;PeSeHtIo-ZTJnetiH teSeJITUh,
+in RhoPe UIefTHe he OeHSTIeO thTt &quot;PeHIeHF inHoIIePUonOenHe, iP fTI t he ZoPt iZUoItTnt HonPiOeITtion.&quot;</pre></div><div class="step"><h3>Step 3 — AND</h3><p>TGO is the second most frequent three-letter word (16 times) and now reads a-n-d: AND. T is the third most frequent letter of the cryptogram, which fits A.</p><pre class="keep">key: ..f...n......od.h..a.eti..
+
+the teSeJIaUh Zade HIFUtoJIaUhF Rhat it iP todaF. PaZDeS f. A. ZoIPePent &quot;Rhat hath Jod RIoDJht!&quot; in
+1844. the neYt FeaI hiP SaRFeI andUIoZotionaS aJent, fIanHiP o. E. PZith, UDASiPhed a HoZZeIHiaS
+HodeentitSed the PeHIet HoIIePUondinJ KoHaADSaIF; adaUted foI DPe to ZoIPe&#x27;PeSeHtIo-ZaJnetiH teSeJIaUh,
+in RhoPe UIefaHe he deHSaIed that &quot;PeHIeHF inHoIIePUondenHe, iP faI t he ZoPt iZUoItant HonPideIation.&quot;</pre></div><div class="step"><h3>Step 4 — the title</h3><p>The title of the passage, WQV WVSVJITUQ, now reads THE TE-E--A-H. The subject of the text and the pattern of repeated letters make TELEGRAPH the only sensible reading.</p><pre class="keep">key: ..f...n.rg...od.h.lapeti..
+
+the telegraph Zade HrFptographF Rhat it iP todaF. PaZDel f. A. ZorPePent &quot;Rhat hath god RroDght!&quot; in
+1844. the neYt Fear hiP laRFer andproZotional agent, franHiP o. E. PZith, pDAliPhed a HoZZerHial
+Hodeentitled the PeHret HorrePponding KoHaADlarF; adapted for DPe to ZorPe&#x27;PeleHtro-ZagnetiH telegraph,
+in RhoPe prefaHe he deHlared that &quot;PeHreHF inHorrePpondenHe, iP far t he ZoPt iZportant HonPideration.&quot;</pre></div><div class="step"><h3>Step 5 — IS, AS and WAS</h3><p>TP occurs 5 times and reads A-. It cannot be AT, since T is already W, so TP is AS and P is S. This also makes XP read IS, and RTP (5 times) read -AS, that is WAS, so R is W.</p><pre class="keep">key: ..f...n.rg...odshwlapeti..
+
+the telegraph Zade HrFptographF what it is todaF. saZDel f. A. Zorsesent &quot;what hath god wroDght!&quot; in
+1844. the neYt Fear his lawFer andproZotional agent, franHis o. E. sZith, pDAlished a HoZZerHial
+Hodeentitled the seHret Horresponding KoHaADlarF; adapted for Dse to Zorse&#x27;seleHtro-ZagnetiH telegraph,
+in whose prefaHe he deHlared that &quot;seHreHF inHorrespondenHe, is far t he Zost iZportant Honsideration.&quot;</pre></div><div class="step"><h3>Step 6 — CRYPTOGRAPHY</h3><p>The long word HIFUWNJITUQF now reads -R-PTOGRAPH-. The text is about secret writing, so this is CRYPTOGRAPHY: H is C and F is Y.</p><pre class="keep">key: ..f..yncrg...odshwlapeti..
+
+the telegraph Zade cryptography what it is today. saZDel f. A. Zorsesent &quot;what hath god wroDght!&quot; in
+1844. the neYt year his lawyer andproZotional agent, francis o. E. sZith, pDAlished a coZZercial
+codeentitled the secret corresponding KocaADlary; adapted for Dse to Zorse&#x27;selectro-Zagnetic telegraph,
+in whose preface he declared that &quot;secrecy incorrespondence, is far t he Zost iZportant consideration.&quot;</pre></div><div class="step"><h3>Step 7 — MADE and SAMUEL</h3><p>ZTOV reads -ADE, so Z is M (MADE). PTZDVS then reads SAM-EL, so D is U, giving the name SAMUEL - Samuel Morse, who fits the subject.</p><pre class="keep">key: ..fu.yncrg...odshwlapeti.m
+
+the telegraph made cryptography what it is today. samuel f. A. morsesent &quot;what hath god wrought!&quot; in
+1844. the neYt year his lawyer andpromotional agent, francis o. E. smith, puAlished a commercial
+codeentitled the secret corresponding KocaAulary; adapted for use to morse&#x27;selectro-magnetic telegraph,
+in whose preface he declared that &quot;secrecy incorrespondence, is far t he most important consideration.&quot;</pre></div><div class="step"><h3>Step 8 — the rare letters</h3><p>Only the rare letters are left, and each is now fixed by a single word: AV = -E is BE, KNSDZXGNDP = -OLUMINOUS is VOLUMINOUS, VYUVGPV = E-PENSE is EXPENSE, MNGV = -ONE is ZONE, VBDTS = E-UAL is EQUAL, EDPW = -UST is JUST and LVFP = KEYS fixes L as K.</p><pre class="keep">key: bqfujyncrgvkzodshwlapetixm
+
+the telegraph made cryptography what it is today. samuel f. b. morsesent &quot;what hath god wrought!&quot; in
+1844. the next year his lawyer andpromotional agent, francis o. j. smith, published a commercial
+codeentitled the secret corresponding vocabulary; adapted for use to morse&#x27;selectro-magnetic telegraph,
+in whose preface he declared that &quot;secrecy incorrespondence, is far t he most important consideration.&quot;</pre></div>
+<p>All 26 letters are now accounted for and the message reads as plain English.</p>
+
+<h2>5. The key and the message</h2>
+<p>Putting the two alphabets side by side gives the key, in the form of table 2.5 of the
+assignment:</p>
+<pre class="key keep">ciphertext   a b c d e f g h i j k l m n o p q r s t u v w x y z
+plaintext    b q f u j y n c r g v k z o d s h w l a p e t i x m</pre>
+<p>Read in the other direction — what each plaintext letter was enciphered to — the key is:</p>
+<pre class="key keep">plaintext    a b c d e f g h i j k l m n o p q r s t u v w x y z
+ciphertext   t a h o v c j q x e l s z g n u b i p w d k r y f m</pre>
+<h3>A check on the answer</h3>
+<p>The second line is not a random permutation. Writing each letter as its position in the alphabet,
+the encipherment is</p>
+<div class="formula"><i>c</i> = (7<i>x</i> + 19) mod 26</div>
+<p>an affine cipher: <code>a</code> (0) goes to 19 = <code>t</code>, <code>b</code> (1) goes to
+26 mod 26 = 0 = <code>a</code>, <code>c</code> (2) goes to 33 mod 26 = 7 = <code>h</code>, and so on
+for all 26 letters.</p>
+<p>Nothing in the attack relied on this — the letters were recovered one at a time from frequencies
+and words, which is what the task asked for. But it is a strong confirmation that the solution is
+correct: a key that was even slightly wrong would show no such structure, so the odds of stumbling
+onto a clean arithmetic rule by accident are negligible.</p>
+<h3>The recovered message</h3>
+<pre>THE TELEGRAPH made cryptography what it is today. Samuel F. B. Morsesent &quot;What hath God wrought!&quot; in
+1844. The next year his lawyer andpromotional agent, Francis O. J. Smith, published a commercial
+codeentitled The Secret Corresponding Vocabulary; Adapted for Use to Morse&#x27;sElectro-Magnetic Telegraph,
+in whose preface he declared that &quot;secrecy incorrespondence, is far t he most important consideration.&quot;
+This wasprovided by a super - encipherment.As the most exciting invention of the first half of the
+century, thetelegraph stirred as much interest in its day as Sputnik did in its. Thegreat and widely
+felt need for secrecy aw akened the latent interest inciphers that so many people seem to have, and
+kindled a new interest inmany others. Dozens of persons attempted to dream up their ownunbreakable
+ciphers. Their contributions enriched it with dozens of newcipher systems.As busin essmen and the public
+used the telegraph more and more,they found that their fears about lack of privacy were exaggerated.
+Theclerks dealt impersonally with the messages. The telegraph companiesrespected their confidentiality.
+And commercial codes like Smith&#x27;s, whichreplaced words and phrases by single codewords or code -numbers
+to cut telegraph tolls, afforded sufficient security for mostbusiness transactions by simply precluding
+an at-sight comprehension ofthe meaning. The brokers and traders soon realized that the mainadvantage of
+these codes was their economy.Government ministries used the telegraph, too. At first they musthave
+encoded with their nomenclators. But although secrecy wasparamount for them, they liked the telegraphic
+economy of a large code —especially as they telegraphed more and more. So when the time arrivedto
+compile a new nomenclator, they abandoned that form, copied thecommercial form, and produced a full
+-fledged code. The nomenclatorshad had their 1,- or 2,000 code-numbers in mixed order , but the warand
+foreign ministries balked at the expense of drawing up a 50,000 -entry code in two parts, and they had
+no professional cryptanalysts towarn them of the danger of the one -part format. They relied for
+securityupon small editions, big safes, e xtensive lexicon (large codes are harderto break than small
+ones, other things being equal), andsuperencipherment, retaining codenumbers to facilitate this instead
+ofswitching to codewords. This evolution was essentially complete by the1860s. The large, one-part code
+had replaced the small, two -partnomenclator in high-level military and diplomatic
+cryptography.Meanwhile, the telegraph, author of this development, was creatingsomething new in
+war—signal communications, or voluminous commandand reconnaissance messages. Of course such messages had
+existedbefore, with torches, pigeons, and couriers, but in so rarefied a form thatthey were not even
+called &quot;signal communications.&quot; The telegraphenabled commanders, for the first time in history, to exert
+instantaneo usand continuous control over great masses of men spread over largeareas.These tactical
+messages required protection: telegraph wires could betapped. Neither the old nomenclator nor the new
+code would do. Theywere too easy to capture in combat, too hard to reissue quickly andfrequently to the
+numerous and widespread telegraph posts. Signalofficers turned away from them. They looked instead to
+that neglectedchild of cryptography, the cipher. Ciphers could be printed cheaply on asingle sheet of
+paper and dist ributed with ease. Secrecy was based uponvariable keys, so capture of the general system
+and even of one of thekeys would not compromise all an army&#x27;s secret messages. Solutionswould be
+prevented by rapid key changes. Ciphers were ideal for battle -zone messages, and the first of the
+modern wars, the American Civil War,used them for just that. Thus was born a new genre in cryptography:
+thefield cipher.</pre>
+<p>The words that run together (<code>Morsesent</code>, <code>thetelegraph</code>) and the stray
+spaces inside words (<code>busin essmen</code>, <code>e xtensive</code>) are inherited from the
+cryptogram as it was given, not introduced by the decryption — every one of them is present in the
+ciphertext in the same place.</p>
+<p>The passage is an extract on the effect of the telegraph on nineteenth-century cryptography, from
+David Kahn's history <i>The Codebreakers</i>.</p>
+
+<h2>6. Implementation</h2>
+<p>The analysis was done with a small Python 3 program, written for this laboratory work, which uses
+only the standard library.</p>
+<table>
+<tr><th>File</th><th>Contents</th></tr>
+<tr><td><code>english.py</code></td><td>English letter frequencies (table 2.2) and the language model</td></tr>
+<tr><td><code>frequency.py</code></td><td>letter, bigram, trigram and word statistics</td></tr>
+<tr><td><code>substitution.py</code></td><td>applying a full or partial key to a text</td></tr>
+<tr><td><code>walkthrough.py</code></td><td>the eight deductions above, as data</td></tr>
+<tr><td><code>solver.py</code></td><td>automatic key recovery by hill climbing</td></tr>
+<tr><td><code>main.py</code></td><td>the command-line program</td></tr>
+</table>
+<pre class="keep">python3 main.py analyse      # the frequency tables
+python3 main.py walkthrough  # the attack, one deduction at a time
+python3 main.py solve        # recover the key automatically
+python3 main.py decrypt      # the plaintext</pre>
+<h3>Showing a half-broken message</h3>
+<pre class="keep">def partial_decrypt(text, key):
+    out = []
+    for char in text:
+        if not char.isalpha():
+            out.append(char)
+            continue
+        lowered = char.lower()
+        if lowered in key:
+            out.append(key[lowered])
+        else:
+            out.append(lowered.upper())
+    return "".join(out)</pre>
+<p>This is what produces the intermediate texts in section 4. A letter already recovered is written
+in lowercase, a letter still unknown is left as the uppercase ciphertext letter, and anything that
+is not a letter is passed through untouched — which is what keeps the word boundaries and
+punctuation visible while the message is only half broken.</p>
+<h3>Repetition patterns</h3>
+<pre class="keep">def pattern(word):
+    seen = {}
+    out = []
+    for letter in word:
+        if letter not in seen:
+            seen[letter] = ALPHABET[len(seen)].upper()
+        out.append(seen[letter])
+    return "".join(out)</pre>
+<p>A substitution cannot change the shape of a word, so <code>pattern("wqvw")</code> and
+<code>pattern("that")</code> are both <code>ABCA</code>. Comparing patterns is what narrows a cipher
+word down to a handful of candidates, and it is the reason <code>VYUVGPV</code> could only be
+<code>EXPENSE</code>.</p>
+<h3>Recovering the key automatically</h3>
+<p>The manual attack was also checked by a program that knows nothing about the message. It starts
+from the key that matches the two frequency orders — the opening move of the manual attack — and
+then improves it by swapping pairs of letters:</p>
+<pre class="keep">def _climb(key, scorer, rng):
+    """Swap plaintext letters until no single swap improves the score."""
+    best = dict(key)
+    best_score = scorer.score(best)
+    letters = list(ALPHABET)
+    improved = True
+    while improved:
+        improved = False
+        pairs = [(a, b) for i, a in enumerate(letters) for b in letters[i + 1:]]
+        rng.shuffle(pairs)
+        for first, second in pairs:
+            candidate = dict(best)
+            candidate[first], candidate[second] = best[second], best[first]
+            candidate_score = scorer.score(candidate)
+            if candidate_score &gt; best_score:
+                best, best_score = candidate, candidate_score
+                improved = True
+    return best, best_score</pre>
+<p>The score decides what counts as progress, and it combines two signals because neither is enough
+alone:</p>
+<pre class="keep">for word in self.words:
+    plain = word.translate(table)
+    padded = "_" + plain + "_"
+    for index in range(len(padded) - 1):
+        bigram_total += self.bigrams.get(padded[index:index + 2], self.floor)
+    if plain in self.dictionary:
+        word_total += len(plain) ** 2</pre>
+<p>Letter-pair statistics give a usable gradient while the text is still gibberish, when no real
+words have appeared yet; counting words of the dictionary sharpens the last steps, weighted by the
+square of the word length because a long word matching is far stronger evidence than a short one.
+Hill climbing can still stall in a local maximum, so the search restarts from shuffled keys and
+keeps the best result.</p>
+<p>Run on this cryptogram the program returns <code>bqfujyncrgvkzodshwlapetixm</code> — the same key recovered by hand,
+and the main confirmation that the manual attack did not go wrong anywhere.</p>
+<h3>Checks</h3>
+<p>Sixteen automated checks cover the pieces: that the key is a one-to-one mapping of all 26 letters,
+that only letters are substituted and capitalisation is preserved, that every step of the walkthrough
+only adds letters and that the eight steps end at the recovered key, and that the plaintext contains
+the phrases it should. Two of them are worth singling out:</p>
+<ul>
+<li>the solver is given the recovered plaintext re-enciphered with a <i>random</i> key and has to
+break that too, which tests the method rather than the answer;</li>
+<li>the key is checked against the affine rule <code>c = (7x + 19) mod 26</code> for all 26 letters.</li>
+</ul>
+<pre class="keep">$ python3 -m unittest discover -s tests
+................
+----------------------------------------------------------------------
+Ran 16 tests in 8.408s
+
+OK</pre>
+
+<h2>7. Conclusions</h2>
+<p>The cipher has 26! &asymp; 4.03 &times; 10<sup>26</sup> possible keys and was broken in eight
+steps, by hand, without trying a single one of them. That is the whole lesson of the laboratory
+work: the size of the key space says almost nothing about the strength of a cipher. What matters is
+whether the ciphertext still carries the structure of the language, and a monoalphabetic
+substitution carries nearly all of it.</p>
+<p>The attack was not really a search. Each step was a hypothesis that could be read back and
+checked immediately — if <code>WQV</code> had not been <code>THE</code>, the next line would have
+been nonsense and the guess abandoned at no cost. Because the evidence accumulates, the work gets
+easier as it goes: the first deduction needed the frequency table, and the last seven letters fell
+out of single words in which they were the only unknown.</p>
+<p>Two details were worth noticing in practice. First, the frequency table is a way in, not an
+answer: lining up the two orders rank for rank was correct for only 9 of the 26 letters.
+It was correct for <code>E</code>, <code>T</code>, <code>A</code> and <code>O</code>, and that was
+enough to make the text readable; everything after that came from words, not counts. Second, what
+gave the message away fastest was not the letters at all but what was left <i>around</i> them — the
+word boundaries, the punctuation and the capitalisation. <code>WQV</code> standing alone 35 times is
+a much louder signal than any frequency, and a cipher that stripped the spaces would have been
+appreciably harder work.</p>
+<p>The practical conclusion is that a monoalphabetic cipher is unusable for anything real. Hiding the
+word boundaries, padding the text or enciphering in fixed-length groups would slow an attacker down
+but would not fix the underlying flaw, since one plaintext letter still always produces the same
+ciphertext letter. The flaw is only repaired by making the substitution change as the message goes
+on — which is what polyalphabetic ciphers do, and which is the next thing to study.</p>
+
+<h2>8. Source code</h2>
+<p>The full source code is in the repository
+<a href="https://github.com/alo42/CS">github.com/alo42/CS</a>, in the <code>LAB2</code> directory.</p>
+<pre class="keep">git clone git@github.com:alo42/CS.git
+cd CS/LAB2
+python3 main.py walkthrough</pre>
+<p><code>solve</code> additionally needs an English word list; it uses
+<code>/usr/share/dict/words</code>, present on macOS and most Linux systems, and the environment
+variable <code>ENGLISH_WORD_LIST</code> overrides the path. Everything else needs only Python 3 and
+the standard library.</p>
+
+</body></html>
