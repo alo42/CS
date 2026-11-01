@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Laboratory Work No. 4 — Block Ciphers. DES</title>
+<style>
+@page { size: A4; margin: 20mm 18mm 18mm 20mm; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body {
+  font-family: "Charter", "Georgia", "Times New Roman", serif;
+  font-size: 10.5pt; line-height: 1.52; color: #111; margin: 0;
+  hyphens: none;
+}
+p { margin: 0 0 8px 0; text-align: justify; }
+
+/* ---------- title page ---------- */
+.title-page { text-align: center; padding-top: 48mm; page-break-after: always; }
+.title-page .kicker { font-size: 11pt; letter-spacing: .14em; text-transform: uppercase; color: #555; }
+.title-page h1 { font-size: 23pt; line-height: 1.25; margin: 10mm 0 2mm; font-weight: 600; }
+.title-page .topic { font-size: 13pt; color: #333; font-style: italic; margin-bottom: 22mm; }
+.title-page .rule { width: 42mm; height: 2px; background: #222; margin: 0 auto 22mm; }
+.title-page .who { font-size: 12.5pt; line-height: 1.95; }
+.title-page .who b { font-weight: 600; }
+.title-page .foot { margin-top: 26mm; font-size: 10.5pt; color: #555; }
+
+/* ---------- headings ---------- */
+h2 {
+  font-size: 14pt; font-weight: 600; margin: 20px 0 9px;
+  padding-bottom: 3px; border-bottom: 1.2px solid #bbb;
+  page-break-after: avoid;
+}
+h3 {
+  font-size: 11.5pt; font-weight: 600; margin: 15px 0 6px; color: #1a1a1a;
+  page-break-after: avoid;
+}
+h2:first-of-type { margin-top: 0; }
+
+/* ---------- code ---------- */
+pre {
+  background: #f6f7f9; border: 1px solid #dde1e6; border-radius: 4px;
+  padding: 7px 9px; margin: 9px 0;
+  font-family: "Menlo", "SF Mono", "Consolas", monospace;
+  font-size: 8.1pt; line-height: 1.4;
+  white-space: pre-wrap; word-break: break-word;
+}
+pre.keep { page-break-inside: avoid; }
+pre.small { font-size: 7.4pt; line-height: 1.33; }
+code {
+  font-family: "Menlo", "SF Mono", "Consolas", monospace;
+  font-size: 8.9pt; background: #f1f3f5; padding: .5px 3px; border-radius: 3px;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- tables ---------- */
+table {
+  width: 100%; border-collapse: collapse; font-size: 9.3pt;
+  margin: 10px 0; page-break-inside: avoid;
+}
+th, td { border: 1px solid #c9ced4; padding: 4px 6px; vertical-align: top; text-align: left; }
+th { background: #eef1f4; font-weight: 600; }
+td code, th code { font-size: 8.4pt; }
+table.keys { font-size: 8.4pt; }
+table.keys td { padding: 2.5px 5px; }
+table.keys td.k { white-space: nowrap; }
+
+/* ---------- formulas ---------- */
+.formula {
+  text-align: center; margin: 11px 0; font-size: 12.5pt;
+  font-family: "Georgia", "Cambria Math", serif;
+}
+.formula i { font-style: italic; }
+.formula .op { font-style: normal; }
+
+ul { margin: 6px 0 9px 0; padding-left: 20px; }
+li { margin-bottom: 3px; }
+ol { margin: 6px 0 9px 0; padding-left: 22px; }
+.caption { font-size: 9pt; color: #555; margin: -4px 0 10px; text-align: left; }
+</style>
+</head>
+<body>
+
+<div class="title-page">
+  <div class="kicker">Laboratory Work No.&nbsp;4</div>
+  <h1>Block Ciphers. The DES Algorithm</h1>
+  <div class="topic">Task 2.5 — given K+, determine<br>all sixteen round keys</div>
+  <div class="rule"></div>
+  <div class="who">
+    Discipline: <b>Cryptography</b><br>
+    Author: <b>Mutu Adrian</b><br>
+    Group: <b>FAF-242</b>
+  </div>
+  <div class="foot">1 November 2026</div>
+</div>
+
+<h2>1. Short theory</h2>
+
+<p>The ciphers of the first three laboratory works operate on one letter at a time. A <i>block cipher</i> works instead on fixed-size groups of bits, transforming a whole block under the control of a key, and it is the form in which practically all modern symmetric encryption is done. The Data Encryption Standard, published as FIPS 46 in 1977 and withdrawn in 2005, is the block cipher every later design is measured against: it encrypts <b>64-bit blocks</b> under a <b>64-bit key of which only 56 bits are used</b>, in <b>16 rounds</b> of a Feistel network.</p>
+
+<h3>1.1 The structure of the algorithm</h3>
+
+<p>A DES encryption of one block runs as follows:</p>
+
+<ol>
+<li>the 64 bits of the block are rearranged by the initial permutation <code>IP</code> and split into two halves of 32 bits, <code>L₀</code> and <code>R₀</code>;</li>
+<li>sixteen rounds are applied. Round <code>i</code> keeps the right half as the new left half and adds the output of the round function to the old left half:
+<div class="formula"><i>L<sub>i</sub></i> = <i>R</i><sub><i>i</i>−1</sub> &nbsp;&nbsp;&nbsp; <i>R<sub>i</sub></i> = <i>L</i><sub><i>i</i>−1</sub> &oplus; <i>f</i>(<i>R</i><sub><i>i</i>−1</sub>, <i>K<sub>i</sub></i>)</div>
+</li>
+<li>after round 16 the two halves are swapped once more and the 64 bits <code>R₁₆L₁₆</code> are rearranged by <code>IP⁻¹</code>, the inverse of the initial permutation, giving the ciphertext.</li>
+</ol>
+
+<p>This shape is called a <i>Feistel network</i>, and it has one property that matters above all others: the round function <code>f</code> need not be invertible. Whatever <code>f</code> does, the round can be undone by knowing <code>R<sub>i−1</sub> = L<sub>i</sub></code> and computing <code>L<sub>i−1</sub> = R<sub>i</sub> ⊕ f(L<sub>i</sub>, K<sub>i</sub>)</code>. Decryption is therefore the very same algorithm with the sixteen round keys applied in the reverse order, <code>K₁₆</code> first — which is why the key schedule is worth implementing on its own, as this task does.</p>
+
+<h3>1.2 The round function</h3>
+
+<p>The function <code>f(R, K)</code> turns 32 bits and a 48-bit round key into 32 bits in four steps:</p>
+
+<ul>
+<li><b>Expansion.</b> <code>E</code> stretches the 32 bits of <code>R</code> to 48 by repeating 16 of them, so that the block and the round key have the same length.</li>
+<li><b>Key mixing.</b> The round key is added bit by bit modulo 2: <code>E(R) ⊕ K</code>. This is the only place the key enters the data path, and it is why the sixteen round keys are the whole of what the key contributes to the cipher.</li>
+<li><b>Substitution.</b> The 48 bits are cut into eight groups of six, <code>B₁ … B₈</code>, and each group enters its own S-box, which replaces 6 bits with 4: the outer bits <code>b₁b₆</code> choose one of four rows, the inner bits <code>b₂b₃b₄b₅</code> one of sixteen columns. The eight S-boxes are the only non-linear part of DES and the reason it resists the attacks of the previous laboratory works.</li>
+<li><b>Permutation.</b> The 32 bits that come out are rearranged by <code>P</code>, which spreads the output of each S-box across the inputs of several S-boxes of the next round — the diffusion of the cipher.</li>
+</ul>
+
+<h3>1.3 The key schedule — the subject of this work</h3>
+
+<p>The sixteen round keys are produced from the key alone, before any data is touched:</p>
+
+<div class="formula"><i>K</i> &nbsp;<span class="op">—PC-1→</span>&nbsp; <i>K</i><sup>+</sup> &nbsp;<span class="op">→</span>&nbsp; <i>C</i><sub>0</sub><i>D</i><sub>0</sub></div>
+<div class="formula"><i>C<sub>i</sub></i> = <span class="op">LS</span><i><sub>i</sub></i>(<i>C</i><sub><i>i</i>−1</sub>) &nbsp;&nbsp; <i>D<sub>i</sub></i> = <span class="op">LS</span><i><sub>i</sub></i>(<i>D</i><sub><i>i</i>−1</sub>) &nbsp;&nbsp; <i>K<sub>i</sub></i> = <span class="op">PC-2</span>(<i>C<sub>i</sub>D<sub>i</sub></i>)</div>
+
+<p><b>PC-1</b> (Permuted Choice 1) selects 56 of the 64 bits of the key and reorders them, giving <code>K+</code>. The eight bits it leaves out are those in positions 8, 16, 24, …, 64 — the parity bit of each byte, which carries no key material. This is the reason a "64-bit" DES key has an effective length of only 56 bits.</p>
+
+<p><code>K+</code> is split into two halves of 28 bits, <code>C₀</code> and <code>D₀</code>. In round <code>i</code> each half is rotated to the left on its own by <code>LS<sub>i</sub></code> places — one place in rounds 1, 2, 9 and 16, and two in the other twelve. The sixteen shifts add up to 28, the length of a half, so after the last round the halves are back where they started: <code>C₁₆ = C₀</code> and <code>D₁₆ = D₀</code>. That is a useful check on any implementation, and it is also what lets the same schedule be generated in reverse for decryption.</p>
+
+<p><b>PC-2</b> (Permuted Choice 2) then selects 48 of the 56 bits of <code>C<sub>i</sub>D<sub>i</sub></code> and reorders them, giving the round key <code>K<sub>i</sub></code>. Eight positions — 9, 18, 22, 25, 35, 38, 43 and 54 — are never named by PC-2 and are therefore dropped in every round; because the halves rotate, a bit dropped in one round is used in the next, so every key bit takes part in about fourteen of the sixteen rounds.</p>
+
+<h3>1.4 Security</h3>
+
+<p>DES was never broken mathematically in the way the ciphers of laboratory works 1 to 3 were: after more than forty years of analysis, differential and linear cryptanalysis are the best attacks known and both need quantities of chosen or known plaintext that are impractical. What defeated DES was the key length. A 56-bit key allows only <code>2⁵⁶ ≈ 7.2 × 10¹⁶</code> possibilities, and exhaustive search became feasible in hardware: the EFF "Deep Crack" machine recovered a key in 56 hours in 1998. The response was Triple DES, which applies the algorithm three times with two or three keys, and then AES, which replaced DES as the standard in 2001.</p>
+
+<h2>2. The assigned task</h2>
+
+<p>The assignment selects the task from the list by <code>nr_sarcina = n mod 11</code>, where <code>n</code> is the student's number in the group register. With <code>n = 16</code>:</p>
+
+<div class="formula">nr_sarcina = 16 <span class="op">mod</span> 11 = 5</div>
+
+<p>which is task 2.5: <i>"În algoritmul DES este dat K+. Să se determine toate cele 16 chei de rundă K<sub>i</sub>."</i> — given <code>K+</code>, determine all sixteen round keys. The assignment further requires that the tables used and all the intermediate steps be shown on screen, and that the input data can either be typed by the user or generated at random.</p>
+
+<h2>3. Implementation</h2>
+
+<p>The program is written in Python 3 and uses only the standard library.</p>
+
+<table>
+<tr><th>File</th><th>Contents</th></tr>
+<tr><td><code>bits.py</code></td><td>bit strings and the operations DES performs on them</td></tr>
+<tr><td><code>des_tables.py</code></td><td>PC-1, the rotation schedule LS<sub>i</sub> and PC-2</td></tr>
+<tr><td><code>key_schedule.py</code></td><td>K+ → C₀D₀ → the sixteen round keys, with every intermediate value</td></tr>
+<tr><td><code>main.py</code></td><td>the interactive program</td></tr>
+<tr><td><code>tests/test_key_schedule.py</code></td><td>the standard worked example and the structural properties</td></tr>
+<tr><td><code>tests/des_reference.py</code>, <code>tests/test_known_answer.py</code></td><td>the DES data path, used only to verify the schedule</td></tr>
+</table>
+
+<h3>Bit strings</h3>
+
+<p>A block is a plain list of 0/1 integers. FIPS 46-3 numbers the bits of a block from 1 on the left and writes every table in those terms, so the permutation function indexes its table 1-based and nothing in the program has to re-number anything:</p>
+
+<pre class="keep">def permute(block, table):
+    """Return the block rearranged by `table`, a 1-based list of positions."""
+    return [block[position - 1] for position in table]
+
+
+def rotate_left(block, amount):
+    """Rotate a block one or more places to the left (the LS_i of the standard)."""
+    amount %= len(block)
+    return block[amount:] + block[:amount]</pre>
+
+<p>One function therefore performs both PC-1 and PC-2 — and, in the data path, IP, E, P and IP⁻¹ as well, since in DES every table is read the same way: <i>the bit of the output at position i is the bit of the input at position table[i]</i>. That single observation is what keeps the implementation short.</p>
+
+<h3>The tables</h3>
+
+<p>PC-1, PC-2 and the shift schedule are transcribed from the standard. Two facts about them are computed rather than written down, so that a typing mistake in a table would be caught instead of being believed:</p>
+
+<pre class="keep">PARITY_BITS = tuple(position for position in range(1, KEY_BITS + 1)
+                    if position not in PC1)
+
+DROPPED_BY_PC2 = tuple(position for position in range(1, KPLUS_BITS + 1)
+                       if position not in PC2)</pre>
+
+<p>These produce <code>(8, 16, 24, 32, 40, 48, 56, 64)</code> and <code>(9, 18, 22, 25, 35, 38, 43, 54)</code>, which are exactly the positions the standard says are discarded — a first confirmation that the tables were copied correctly.</p>
+
+<h3>The key schedule</h3>
+
+<pre class="keep">def permuted_choice_1(key):
+    """K+ = PC-1(K): drop the 8 parity bits of the key and reorder the rest."""
+    return bits.permute(key, PC1)
+
+
+def split(kplus):
+    """C_0 and D_0: the left and the right half of K+."""
+    return kplus[:HALF_BITS], kplus[HALF_BITS:]
+
+
+def halves(kplus):
+    """All the pairs (C_i, D_i), from i = 0 to i = 16."""
+    c, d = split(kplus)
+    pairs = [(c, d)]
+    for shift in SHIFTS:
+        c = bits.rotate_left(c, shift)
+        d = bits.rotate_left(d, shift)
+        pairs.append((c, d))
+    return pairs
+
+
+def round_key(c, d):
+    """K_i = PC-2(C_i D_i): 48 of the 56 bits of the two halves."""
+    return bits.permute(c + d, PC2)
+
+
+def round_keys(kplus):
+    """The sixteen round keys K_1 ... K_16 - the answer to task 2.5."""
+    return [round_key(c, d) for c, d in halves(kplus)[1:]]</pre>
+
+<p>A further function, <code>schedule()</code>, returns one record per round holding the shift applied, both halves before and after it and the resulting round key. The cipher itself needs only <code>round_keys()</code>; <code>schedule()</code> exists because the assignment requires every intermediate step to be displayed, and keeping the two apart means the printing code never has to recompute anything.</p>
+
+<h3>Input</h3>
+
+<p>The program accepts the key as <b>8 characters</b> — the "8 simboluri" of the assignment, one byte each — or as <b>16 hexadecimal digits</b>, which is how published DES test keys are written. Since 16 hexadecimal digits are never 8 characters, the two cannot be confused. <code>K+</code> may be typed directly as 56 bits or 14 hexadecimal digits, and a key can be generated at random. Everything that is rejected is reported with the reason, and the question is asked again.</p>
+
+<h2>4. Results</h2>
+
+<p>The runs below were produced by <code>python3 main.py</code> and are reproduced as they appear on screen. The key <code>133457799BBCDFF1</code> is used throughout, because it is the key of the standard worked example of DES and every value can therefore be compared against a published one.</p>
+
+<h3>The tables</h3>
+
+<pre class="keep">========================================================================
+The tables of the DES key schedule
+========================================================================
+  PC-1 - chooses 56 of the 64 bits of K:
+    57 49 41 33 25 17  9
+     1 58 50 42 34 26 18
+    10  2 59 51 43 35 27
+    19 11  3 60 52 44 36
+    63 55 47 39 31 23 15
+     7 62 54 46 38 30 22
+    14  6 61 53 45 37 29
+    21 13  5 28 20 12  4
+
+    dropped (parity bits): 8, 16, 24, 32, 40, 48, 56, 64
+
+  LS_i - the left rotation of round i:
+    round   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16
+    shift   1  1  2  2  2  2  2  2  1  2  2  2  2  2  2  1
+
+  PC-2 - chooses 48 of the 56 bits of C_i D_i:
+    14 17 11 24  1  5
+     3 28 15  6 21 10
+    23 19 12  4 26  8
+    16  7 27 20 13  2
+    41 52 31 37 47 55
+    30 40 51 45 33 48
+    44 49 39 56 34 53
+    46 42 50 36 29 32
+
+    dropped: 9, 18, 22, 25, 35, 38, 43, 54</pre>
+
+<h3>From the key to K+</h3>
+
+<pre class="keep">Your choice: 1
+Key - 8 characters or 16 hexadecimal digits: 133457799BBCDFF1
+
+========================================================================
+Task 2.5 - the sixteen round keys of DES, starting from the key
+========================================================================
+  The key K (64 bits):
+    hex       133457799BBCDFF1
+    bits      00010011 00110100 01010111 01111001
+              10011011 10111100 11011111 11110001
+
+------------------------------------------------------------------------
+Step 1 - PC-1: K  -&gt;  K+   (56 of the 64 bits, reordered)
+------------------------------------------------------------------------
+  The 8 bits PC-1 leaves out are the parity bits of the key -
+  positions 8, 16, 24, 32, 40, 48, 56, 64 - which carry no key material.
+    parity bits of K: 1 0 1 1 1 0 1 1
+
+  K+ (56 bits, in groups of 7):
+    1111000 0110011 0010101 0101111 0101010 1011001 1001111 0001111
+    hex F0CCAAF556678F
+
+------------------------------------------------------------------------
+Step 2 - split K+ into two halves of 28 bits
+------------------------------------------------------------------------
+  C0 = 1111000011001100101010101111
+  D0 = 0101010101100110011110001111
+
+------------------------------------------------------------------------
+Step 3 - the rotation schedule LS_i
+------------------------------------------------------------------------
+    round   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16
+    shift   1  1  2  2  2  2  2  2  1  2  2  2  2  2  2  1
+  The sixteen shifts add up to 28, the length of a half, so after
+  round 16 the halves are back where they started: C16 = C0.</pre>
+
+<p class="caption">The PC-1 table itself is printed at this point too; it is omitted here because it appears in the previous listing.</p>
+
+<h3>The rounds</h3>
+
+<p>Each of the sixteen rounds prints the shift, both halves before and after it, and the round key. The first two and the last are reproduced here; the remaining thirteen have the same form.</p>
+
+<pre class="keep">  Round 1   (rotate both halves left by 1)
+    C0  = 1111000011001100101010101111
+    D0  = 0101010101100110011110001111
+    C1  = 1110000110011001010101011111
+    D1  = 1010101011001100111100011110
+    K1  = 000110 110000 001011 101111 111111 000111 000001 110010
+          hex 1B02EFFC7072
+
+  Round 2   (rotate both halves left by 1)
+    C1  = 1110000110011001010101011111
+    D1  = 1010101011001100111100011110
+    C2  = 1100001100110010101010111111
+    D2  = 0101010110011001111000111101
+    K2  = 011110 011010 111011 011001 110110 111100 100111 100101
+          hex 79AED9DBC9E5
+
+  ...
+
+  Round 16   (rotate both halves left by 1)
+    C15 = 1111100001100110010101010111
+    D15 = 1010101010110011001111000111
+    C16 = 1111000011001100101010101111
+    D16 = 0101010101100110011110001111
+    K16 = 110010 110011 110110 001011 000011 100001 011111 110101
+          hex CB3D8B0E17F5</pre>
+
+<p>In round 16 the two halves printed as <code>C16</code> and <code>D16</code> are literally the <code>C0</code> and <code>D0</code> of step 2 — the shifts have closed the circle, exactly as section 1.3 predicts.</p>
+
+<h3>The answer — the sixteen round keys</h3>
+
+<pre class="keep small">------------------------------------------------------------------------
+The sixteen round keys
+------------------------------------------------------------------------
+  K1  = 000110 110000 001011 101111 111111 000111 000001 110010   (1B02EFFC7072)
+  K2  = 011110 011010 111011 011001 110110 111100 100111 100101   (79AED9DBC9E5)
+  K3  = 010101 011111 110010 001010 010000 101100 111110 011001   (55FC8A42CF99)
+  K4  = 011100 101010 110111 010110 110110 110011 010100 011101   (72ADD6DB351D)
+  K5  = 011111 001110 110000 000111 111010 110101 001110 101000   (7CEC07EB53A8)
+  K6  = 011000 111010 010100 111110 010100 000111 101100 101111   (63A53E507B2F)
+  K7  = 111011 001000 010010 110111 111101 100001 100010 111100   (EC84B7F618BC)
+  K8  = 111101 111000 101000 111010 110000 010011 101111 111011   (F78A3AC13BFB)
+  K9  = 111000 001101 101111 101011 111011 011110 011110 000001   (E0DBEBEDE781)
+  K10 = 101100 011111 001101 000111 101110 100100 011001 001111   (B1F347BA464F)
+  K11 = 001000 010101 111111 010011 110111 101101 001110 000110   (215FD3DED386)
+  K12 = 011101 010111 000111 110101 100101 000110 011111 101001   (7571F59467E9)
+  K13 = 100101 111100 010111 010001 111110 101011 101001 000001   (97C5D1FABA41)
+  K14 = 010111 110100 001110 110111 111100 101110 011100 111010   (5F43B7F2E73A)
+  K15 = 101111 111001 000110 001101 001111 010011 111100 001010   (BF918D3D3F0A)
+  K16 = 110010 110011 110110 001011 000011 100001 011111 110101   (CB3D8B0E17F5)
+
+  Check: C16 = C0 and D16 = D0 ... yes</pre>
+
+<h3>Task 2.5 as it is stated — K+ given</h3>
+
+<p>The task gives <code>K+</code>, not the key. The second menu entry takes it directly, and the key itself is never needed:</p>
+
+<pre class="keep">Your choice: 2
+K+ - 56 bits (0s and 1s) or 14 hexadecimal digits: 11110000110011001010101011110101010101100110011110001111
+
+========================================================================
+Task 2.5 - the sixteen round keys of DES, starting from K+
+========================================================================
+  K+ (56 bits, in groups of 7):
+    1111000 0110011 0010101 0101111 0101010 1011001 1001111 0001111
+    hex F0CCAAF556678F</pre>
+
+<p>From there the output is identical to the listing above, which is the point: <code>K+</code> is all the key schedule ever uses.</p>
+
+<h3>An 8-character key</h3>
+
+<p>Typing the key as eight characters prints their ASCII codes as well, since that is where the 64 bits come from:</p>
+
+<pre class="keep">Key - 8 characters or 16 hexadecimal digits: Cripto24
+
+  The key K (64 bits):
+    character   C    r    i    p    t    o    2    4
+    ASCII      67  114  105  112  116  111   50   52
+    hex       43726970746F3234
+    bits      01000011 01110010 01101001 01110000
+              01110100 01101111 00110010 00110100
+
+  K+ (56 bits, in groups of 7):
+    0000000 0001111 1111111 1101101 0110001 1101100 0000100 1001010
+    hex 003FFED63B024A
+
+  C0 = 0000000000111111111111101101
+  D0 = 0110001110110000001001001010
+  K1  = 111100 001011 011000 101110 010000 100000 011010 100110   (F0B62E4206A6)
+  K16 = 111000 011010 111010 100110 001111 110000 001001 001100   (E1AEA63F024C)</pre>
+
+<p>The long run of zeros at the start of this <code>K+</code> is not a fault: printable ASCII characters all have bit 1 equal to 0, and PC-1 gathers the first column of the key into the first bits of <code>K+</code>. It is a reminder that a key made of typed characters is far weaker than its 56 bits suggest — a point the third menu entry avoids by generating all 64 bits at random.</p>
+
+<h3>Invalid input</h3>
+
+<pre class="keep">Your choice: 5
+  [invalid input] '5' is not one of the options; type 0 or 1 or 2 or 3 or 4
+
+Your choice: 1
+Key - 8 characters or 16 hexadecimal digits: Criptoăă
+  [invalid input] the character 'ă' has no single-byte code, so it cannot be
+  one of the 8 symbols of a DES key; use characters with an ASCII code, or
+  give the key as 16 hexadecimal digits
+
+Key - 8 characters or 16 hexadecimal digits: short
+  [invalid input] the key must be 8 characters (64 bits, one byte per
+  character) or 16 hexadecimal digits; 5 character(s) given
+
+Key - 8 characters or 16 hexadecimal digits: Cripto24</pre>
+
+<p class="caption">The two long messages are wrapped here to fit the page; on the terminal each is printed on one line.</p>
+
+<h2>5. Verification</h2>
+
+<p>Every value in section 4 agrees with the standard worked example of DES, and the tests pin all sixteen round keys, not only the first and the last that are usually quoted.</p>
+
+<p>That check has a limit, though: it compares the program against one published example. A round key cannot be verified against anything on its own — it is 48 bits with no structure to inspect. The only independent evidence that the schedule is right is that a <i>complete</i> DES encryption built on these sixteen keys reproduces a known ciphertext, because a single wrong bit anywhere in the schedule changes the output completely. So <code>tests/des_reference.py</code> adds the data path of section 1.2 — <code>IP</code>, <code>E</code>, the eight S-boxes, <code>P</code> and <code>IP⁻¹</code> — and drives it with the round keys this program produces:</p>
+
+<table>
+<tr><th>Key</th><th>Plaintext</th><th>Expected ciphertext</th></tr>
+<tr><td><code>133457799BBCDFF1</code></td><td><code>0123456789ABCDEF</code></td><td><code>85E813540F0AB405</code></td></tr>
+<tr><td><code>0101010101010101</code></td><td><code>0000000000000000</code></td><td><code>8CA64DE9C1B123A7</code></td></tr>
+<tr><td><code>0E329232EA6D0D73</code></td><td><code>8787878787878787</code></td><td><code>0000000000000000</code></td></tr>
+</table>
+
+<p>All three are reproduced exactly. That file is a test fixture and is not part of task 2.5; it exists so that the claim "the sixteen round keys are correct" can be checked by running the tests rather than taken on trust.</p>
+
+<p>The remaining tests cover properties that must hold for <i>any</i> K+, not only for the example: that PC-1 and PC-2 name distinct positions in range and discard exactly the eight documented ones, that the shifts add up to 28 and are single only in rounds 1, 2, 9 and 16, that every round key is 48 bits, that the sixteen are all different, that C₁₆ = C₀, that flipping any parity bit of the key leaves all sixteen round keys unchanged, and that flipping a real key bit disturbs most of them.</p>
+
+<pre class="keep">$ python3 -m unittest discover -s tests
+.........................
+----------------------------------------------------------------------
+Ran 25 tests in 0.002s
+
+OK</pre>
+
+<h2>6. Conclusions</h2>
+
+<p>The key schedule is the smallest part of DES and the one that explains the most about it. Three facts fall straight out of implementing it. The first is where the "64-bit key" of DES goes: PC-1 discards eight of those bits before anything else happens, and the test that flips each of them in turn and gets the same sixteen round keys shows directly that they carry nothing. The effective key is 56 bits, and that — not any weakness in the rounds — is what ended DES.</p>
+
+<p>The second is that the schedule is built out of nothing but rotations and two fixed selections. There is no arithmetic in it at all, which is what makes the <code>C₁₆ = C₀</code> identity possible: the sixteen shifts were chosen to add up to 28 precisely so that the halves return to their starting position, which lets the same hardware generate the keys forwards for encryption and backwards for decryption. It is a design decision visible in a one-line check at the end of the program's output.</p>
+
+<p>The third is how little separates the key schedule from a cipher that does nothing. Because the schedule is linear, a key whose K+ is all zeros produces sixteen identical all-zero round keys — the degenerate case the tests exercise — and the four DES weak keys arise in exactly that way, from halves that are constant under rotation. The strength of DES is not in the key schedule but in the S-boxes, and the key schedule's job is only to make sure every round sees a different 48 bits.</p>
+
+<p>On the implementation side, the single most useful decision was to write <code>permute()</code> once, 1-based, in the same terms the standard uses, and let PC-1 and PC-2 — and later IP, E, P and IP⁻¹ in the verification fixture — all be calls to it. The tables are then the only thing that can be wrong, and deriving the discarded positions from the tables rather than writing them down turns a transcription error into a failing test. The verification was the other lesson: checking the program against a published worked example proves only that it matches that example, while running a full DES encryption on its output and reproducing three known ciphertexts is evidence that does not depend on having copied the reference values correctly in the first place.</p>
+
+<h2>7. Source code</h2>
+
+<p>The full source code is in the repository <a href="https://github.com/alo42/CS">github.com/alo42/CS</a>.</p>
+
+<p>To run the program:</p>
+
+<pre class="keep">git clone git@github.com:alo42/CS.git
+cd CS/LAB4
+python3 main.py</pre>
+
+<p>To run the automated checks:</p>
+
+<pre class="keep">python3 -m unittest discover -s tests</pre>
+
+<p>The program needs only Python 3 and the standard library.</p>
+
+</body>
+</html>
